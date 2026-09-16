@@ -1208,6 +1208,14 @@ local SORT_MAX_ITERS  = 50      -- hard safety cap (guards against a never-settl
 local MERGE_MAX_ITERS = 20
 local ROUTE_MAX_ITERS = 20
 
+-- A corpse can't move items: every PickupContainerItem the sort issues comes back as a red
+-- "You can't do that when you're dead" error, one per attempted swap, for as many passes as the
+-- driver runs (issue #85). SortBags refuses at the door and says so once; _sortStep checks too, so
+-- dying mid-sort ends it instead of spamming the rest of the way.
+local function isDead()
+  return UnitIsDeadOrGhost and UnitIsDeadOrGhost("player") and true or false
+end
+
 -- End the sort: drop the cached plan + cover and do the single, final repaint to the sorted layout.
 local function finishSort()
   CB._sorting = false
@@ -1223,7 +1231,7 @@ end
 -- round-trip) and yields via C_Timer so the moves settle between passes.
 function CB._sortStep()
   if not CB._sorting then return end
-  if InCombatLockdown() then finishSort(); return end
+  if InCombatLockdown() or isDead() then finishSort(); return end
 
   if CB._sortPhase == "merge" then
     CB._mergeIter = (CB._mergeIter or 0) + 1
@@ -1280,6 +1288,10 @@ end
 
 function CB.SortBags()
   if InCombatLockdown() or CB._sorting then return end
+  if isDead() then
+    if UIErrorsFrame and ERR_PLAYER_DEAD then UIErrorsFrame:AddMessage(ERR_PLAYER_DEAD, 1, 0.2, 0.2) end
+    return
+  end
   if not (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo
           and PickupContainerItem) then return end
   CB._sorting = true

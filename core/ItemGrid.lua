@@ -211,6 +211,75 @@ local function hookNewItemClear(btn)
   end)
 end
 
+-- ----------------------------------------------------------------------------
+-- Item-targeting spells on our slots (armor kits, enchant scrolls, oils, poisons).
+--
+-- Clicking the TARGET item finishes the cast through the client's Spell_C__TrySetSpellTarget,
+-- which is taint-gated: verified in Wow.exe 3.3.5a (12340), Script_UseContainerItem →
+-- GameUI__ConfirmItemEnchantTarget → FrameScript__HandleEvent(2), the HARD-forbidden case — the
+-- one that raises the ADDON_ACTION_FORBIDDEN dialog ("blocked from an action only available to
+-- the Blizzard UI"), not the softer hardware-event case. Our pooled buttons are addon-created, so
+-- the stock ContainerFrameItemButton_OnClick runs tainted on them and the client refuses the
+-- application (issue #84).
+--
+-- SecureActionButton_OnClick's target-bag / target-slot branch is the supported route, so park ONE
+-- secure button over the hovered slot while a spell is waiting for an item target. ONE, not a
+-- secure grid: SecureActionButtonTemplate inherits SecureFrameTemplate (protected="true"), and a
+-- pool of protected buttons could not be shown/hidden/reparented during an in-combat bag refresh.
+-- In combat we do nothing at all for the same reason — it degrades to the stock (blocked) click,
+-- which is no worse than before, and nobody applies an armor kit mid-fight.
+-- ----------------------------------------------------------------------------
+local spellTargetProxy
+
+local function canTargetItem()
+  return SpellCanTargetItem and SpellCanTargetItem() and true or false
+end
+
+local function showSpellTargetProxy(btn)
+  if not (btn and btn._bagID and btn._slotID) then return end
+  if InCombatLockdown() then return end
+  if not canTargetItem() then
+    if spellTargetProxy then spellTargetProxy:Hide() end
+    return
+  end
+  local p = spellTargetProxy
+  if not p then
+    p = CreateFrame("Button", "NE_ItemGridSpellTarget", UIParent, "SecureActionButtonTemplate")
+    p:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    p:SetAttribute("type2", "stop")     -- right-click cancels targeting, as the stock bags do
+    p:SetFrameStrata("TOOLTIP")         -- over the bag chrome, whatever strata the window sits in
+    p:Hide()
+    p:SetScript("OnLeave", function(self) self:Hide() end)
+    -- Targeting cancelled, bag closed, or the slot repainted onto another item (a sort runs while
+    -- we sit here) — the proxy is invisible, so it must never outlive the slot it covers, or it
+    -- eats clicks on empty screen and points a half-applied kit at whatever moved in. Hiding a
+    -- protected frame IS itself blocked in combat, so in combat it just waits; it can only be
+    -- stranded there by combat starting with the cursor already parked on a bag slot mid-apply.
+    p:SetScript("OnUpdate", function(self)
+      if InCombatLockdown() then return end
+      local b = self._neBtn
+      if not (canTargetItem() and b and b:IsVisible()
+              and b._bagID == self:GetAttribute("target-bag")
+              and b._slotID == self:GetAttribute("target-slot")) then
+        self:Hide()
+      end
+    end)
+    spellTargetProxy = p
+  end
+  p._neBtn = btn
+  p:SetAttribute("target-bag", btn._bagID)
+  p:SetAttribute("target-slot", btn._slotID)
+  p:ClearAllPoints()
+  p:SetAllPoints(btn)
+  p:Show()
+end
+
+local function hookSpellTarget(btn)
+  if not btn or btn._neSpellTargetHook then return end
+  btn._neSpellTargetHook = true
+  btn:HookScript("OnEnter", showSpellTargetProxy)
+end
+
 -- Back-compat exports.
 M.UpdateItemOverlays = updateItemOverlays
 G.ItemStartsQuest = itemStartsQuest
@@ -372,6 +441,7 @@ function G.New(opts)
     slotMarkEmpty(b)
     silenceOverlays(b)
     hookNewItemClear(b)
+    hookSpellTarget(b)
     if not b.BagIndicator then
       local ind = b:CreateTexture(nil, "OVERLAY", nil, 2)
       ind:SetTexture("Interface\\Store\\store-item-highlight")

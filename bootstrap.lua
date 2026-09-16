@@ -98,6 +98,23 @@ local function applyMigrations(db)
     end
 end
 
+-- Taint forensics. The client's "blocked from an action only available to the Blizzard UI" dialog
+-- names the addon and nothing else, which is not enough to find the call: ADDON_ACTION_FORBIDDEN
+-- carries the blocked FUNCTION in arg2, and that is the whole difference between a bug report we
+-- can act on and a screenshot of a popup (issue #84). Only speaks up when WE are the one blamed,
+-- and once per function per session.
+local blamed = {}
+local taintWatch = CreateFrame("Frame")
+taintWatch:RegisterEvent("ADDON_ACTION_FORBIDDEN")
+taintWatch:SetScript("OnEvent", function(_, _, addon, func)
+    if addon ~= ADDON or not func or blamed[func] then return end
+    blamed[func] = true
+    if DEFAULT_CHAT_FRAME then
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff5555DragonUI_NewEra|r: " ..
+            NE.L["blocked from calling %s — please report that function name."]:format(func))
+    end
+end)
+
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("ADDON_LOADED")
 boot:SetScript("OnEvent", function(self, _, name)

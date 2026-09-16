@@ -194,9 +194,13 @@ local FRAME_TOP_OFFSET = -55
 -- ----------------------------------------------------------------------------
 local function nodeCenter(tier, column)
   -- x: the per-tab column map (T.SetColumnLayout) — ONE x per column for the whole tree, so a talent
-  -- and its prereq in the same column line up dead-vertically; else the plain grid.
-  local lay = T._colX
-  local x = (lay and lay[column]) or ((column - 1) * PITCH_X + NODE / 2)
+  -- and its prereq in the same column line up dead-vertically; else the plain grid. In CENTRED-rows
+  -- mode the map is per-tier instead (T._tierColX) and each row is packed and centred on its own.
+  local rows = T._tierColX
+  local lay  = T._colX
+  local x = (rows and rows[tier] and rows[tier][column])
+         or (lay and lay[column])
+         or ((column - 1) * PITCH_X + NODE / 2)
   -- The final (deepest) tier can take extra drop; WotLK sets LAST_TIER_EXTRA=0 → no-op.
   local extraLast = (tier == TIERS) and LAST_TIER_EXTRA or 0
   -- T._nodeYShift pushes the whole grid DOWN (0 for player's full 11-tier trees; >0 for a shallow pet
@@ -224,12 +228,56 @@ T.nodeCenter = nodeCenter
 -- body sits centred and the outlier hangs into the (empty) gap between trees, capped at half a pitch
 -- of overhang. One shift for the whole tree, so nothing moves relative to anything else.
 --
--- Do NOT make this per-row. Centring each row on its own occupied columns closes the dead space, but
--- a shift moves a column's x for that row alone: rows then drift half a pitch against each other and
--- the columns visibly zigzag. Pinning prereq-linked rows to a shared shift keeps their lines
--- straight but does nothing for the jitter everywhere else — it was tried, and it reads as janky.
+-- Per-row centring is the OTHER mode, not the default: centring each row on its own occupied columns
+-- closes the dead space, but a shift moves a column's x for that row alone, so rows drift half a
+-- pitch against each other and the columns visibly zigzag — and a prereq link that was a plain
+-- vertical becomes a dogleg for the edge router to bend around. It reads as janky to some and as the
+-- proper Dragonflight look to others, so it's a preference (T.SetCentredRows, cog menu) rather than
+-- a verdict. Default off = the grid below.
 -- `occupied` = array of { tier=, column= }.
+
+-- Centred rows: each tier's k talents packed and centred across the COLS-wide row, mirroring the
+-- reference TalentFrameBase TALENT_CENTER_ROWS mod. Edges connect occupied cells only, so empty
+-- columns need no interpolation.
+local function centredRowLayout(occupied)
+  local byTier = {}
+  for _, c in ipairs(occupied) do
+    if c.tier and c.column then
+      byTier[c.tier] = byTier[c.tier] or {}
+      byTier[c.tier][c.column] = true
+    end
+  end
+  local lay = {}
+  for tier, cols in pairs(byTier) do
+    local list = {}
+    for col = 1, COLS do if cols[col] then list[#list + 1] = col end end
+    lay[tier] = {}
+    local leftCenter = NODE / 2 + ((COLS - #list) / 2) * PITCH_X   -- centre-x of the first packed talent
+    for m = 1, #list do
+      lay[tier][list[m]] = leftCenter + (m - 1) * PITCH_X
+    end
+  end
+  return lay
+end
+
+-- Account-wide preference. Read by SetColumnLayout on every Populate, so flipping it and
+-- re-populating is all the cog menu has to do.
+function T.CentredRows()
+  return (NE.db and NE.db.talentCentreRows) and true or false
+end
+
+function T.SetCentredRows(on)
+  if NE.db then NE.db.talentCentreRows = on and true or false end
+end
+
 function T.SetColumnLayout(occupied)
+  if T.CentredRows() then
+    T._colX = nil
+    T._tierColX = centredRowLayout(occupied)
+    return
+  end
+  T._tierColX = nil
+
   local sum, n, minC, maxC = 0, 0, nil, nil
   for _, c in ipairs(occupied) do
     local col = c.column

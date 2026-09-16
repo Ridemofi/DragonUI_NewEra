@@ -528,3 +528,16 @@ L["No team"] = true
 L["Rating"] = true
 L["Unranked"] = true
 L["View this player's talents."] = true
+
+-- ============================================================================
+-- TALENTS
+-- ============================================================================
+
+L["Centre talent rows"] = true
+L["Talent options"] = true
+
+-- ============================================================================
+-- MISCELLANEOUS
+-- ============================================================================
+
+L["blocked from calling %s — please report that function name."] = true

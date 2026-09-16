@@ -30,7 +30,7 @@ A standalone War-Within-style talent window over WotLK's classic grid talents, o
 
 - **Three trees** on the Dragonflight metal chrome, with real talent data, per-tree point readouts, and a live **preview → Apply / Reset** flow — left-click to spend, right-click to refund, nothing is permanent until you Apply (behind a confirm).
 - **Retail-style nodes** — square / circle / capstone art derived per talent, with a hover highlight, a gold flash when a rank lands, and a subtle random glint that wanders across the talents you've spent points in.
-- **Per-tier centering** — rows with fewer than four talents are packed and centred (the way retail lays them out), and the three trees are centred in the window.
+- **Row layout, your choice** — talents sit on the true four-column grid by default, so a talent lines up dead-vertically under the prereq it needs; tick **Centre talent rows** in the window's cog menu to pack and centre each row on itself instead (the way retail lays them out). Either way the three trees are centred in the window.
 - **Spec-art backgrounds** — each class/spec paints its own artwork behind the trees.
 - **Animated connectors** — prerequisite links draw as a flowing dotted line straight from one talent to the talent that needs it.
 - **Multi-spec** — bottom tabs switch between up to 4 specs depending on server configurations; rename the specs from the cog (custom names persist per character). View your other spec read-only (dimmed) and hit **Activate** to switch to it.

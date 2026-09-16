@@ -196,7 +196,30 @@ local function buildPetTab()
   return tab
 end
 
--- Rename cog: a gear seated to the right of the tab row; opens the rename dialog for the VIEWED spec.
+-- Cog menu: talent-window options. Rename only makes sense with more than one spec, so it is
+-- offered conditionally; the row layout applies to every character and is always there.
+local function cogMenu(_, root)
+  local num = (GetNumTalentGroups and (GetNumTalentGroups() or 1)) or 1
+  if IsTriumvirate() then num = 4 end
+  if num >= 2 then
+    root:CreateButton(L["Rename specialization"], function()
+      local g = T._viewGroup or 1
+      StaticPopup_Show("NE_TALENT_RENAME_SPEC", nil, nil, { group = g, current = customName(g) or "" })
+    end)
+    root:CreateDivider()
+  end
+  -- Unchecked is the true 4-column grid (a talent sits at its real column); checked packs and
+  -- centres each row on itself, the pre-8/2026 look asked for in issue #86.
+  root:CreateCheckbox(L["Centre talent rows"],
+    function() return T.CentredRows and T.CentredRows() end,
+    function()
+      if not (T.SetCentredRows and T.CentredRows) then return end
+      T.SetCentredRows(not T.CentredRows())
+      if T.Populate then T.Populate() end
+    end)
+end
+
+-- Options cog: a gear seated to the right of the tab row.
 local function buildCog()
   local f = T.frame
   if T._specCog then return T._specCog end
@@ -216,13 +239,14 @@ local function buildCog()
   -- top-right of the button anchored to the top-right of the talent BACKGROUND (inside the chrome),
   -- with a small buffer so it isn't touching the window border.
   cog:SetPoint("TOPRIGHT", f.bg or f, "TOPRIGHT", -8, -8)
-  cog:SetScript("OnClick", function()
-    local g = T._viewGroup or 1
-    StaticPopup_Show("NE_TALENT_RENAME_SPEC", nil, nil, { group = g, current = customName(g) or "" })
+  cog:SetScript("OnClick", function(self)
+    if not (NE.menu and NE.menu.ToggleAnchored) then return end
+    NE.menu.ToggleAnchored(cogMenu, self,
+      { point = "TOPRIGHT", relativePoint = "BOTTOMRIGHT", x = 0, y = -2 })
   end)
   cog:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText(L["Rename specialization"], 1, 1, 1)
+    GameTooltip:SetText(L["Talent options"], 1, 1, 1)
     GameTooltip:Show()
   end)
   cog:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -314,8 +338,10 @@ function T.RefreshSpecTabs()
     if gtab then gtab:Hide() end
   end
 
+  -- No tabs at all (one spec, no glyphs, no pet) is still the talents view, and the cog now carries
+  -- the row-layout option every character has — so it stays, it just has nothing to sit beside.
   if #tabsToSize == 0 then
-    if T._specCog then T._specCog:Hide() end
+    buildCog():Show()
     return
   end
 
@@ -327,19 +353,20 @@ function T.RefreshSpecTabs()
   -- Update selected tab art for all 4 specs
   local specTurn = (not glyphActive) and (not petActive)
   if num >= 2 then
-    for g = 1, num do 
+    for g = 1, num do
       local tab = _G[TAB_NAMES[g]]
-      if tab then setTabArt(tab, specTurn and (g == viewG)) end 
-    end
-    if glyphActive or petActive then
-      if T._specCog then T._specCog:Hide() end
-    else
-      buildCog():Show()
+      if tab then setTabArt(tab, specTurn and (g == viewG)) end
     end
   else
-    if T._specCog then T._specCog:Hide() end
     local t1 = _G[TAB_NAMES[1]]
     if t1 then setTabArt(t1, specTurn) end
+  end
+  -- The cog belongs to the talents view, whatever the spec count — the glyph and pet tabs have
+  -- nothing in its menu.
+  if specTurn then
+    buildCog():Show()
+  elseif T._specCog then
+    T._specCog:Hide()
   end
 
   if petAvail then
