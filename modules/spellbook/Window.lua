@@ -477,12 +477,20 @@ local function ensureSecureClose()
   c:SetFrameRef("frame", f)
   c:SetAttribute("_onclick", [=[ self:GetFrameRef("frame"):Hide() ]=])
   if c.RegisterForClicks then c:RegisterForClicks("AnyUp") end
+  -- `self` (the wrapped frame), NOT `control`. On 3.3.5a ClearBindings / SetBindingClick live on
+  -- the FRAME HANDLE (RestrictedFrames.lua) and the control object has no such methods — the
+  -- `control:` form is a Cataclysm-and-later idiom that was ported down verbatim and threw
+  -- "attempt to call method 'ClearBindings' (a nil value)" out of the OnHide wrap. It went
+  -- unnoticed because the wrap never ran: SecureHandler_Other_Execute needs an EXPLICITLY
+  -- protected frame handle for `self`, and this window only became explicitly protected when
+  -- issue #72 was fixed. Bindings are owned by the frame they are set from, so setting on show
+  -- and clearing on hide still pairs up.
   if SecureHandlerWrapScript then
     SecureHandlerWrapScript(f, "OnShow", c, [=[
-      control:SetBindingClick(true, "ESCAPE", "NE_SpellBookSecureClose")
+      self:SetBindingClick(true, "ESCAPE", "NE_SpellBookSecureClose")
     ]=])
     SecureHandlerWrapScript(f, "OnHide", c, [=[
-      control:ClearBindings()
+      self:ClearBindings()
     ]=])
   end
   SB._secureClose = c
