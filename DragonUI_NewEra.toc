@@ -86,6 +86,10 @@ Textures\Assets.lua
 # --- integration: DragonUI handshake/options/module bridge (owner: Integration Liaison) ---
 integration\Register.lua
 integration\Options.lua
+# Works around a DragonUI-internal interaction (its vehicle module strips VehicleMenuBar of the
+# secure children its keypress snippet then asks about). Pure interop patch; the file's header is
+# addressed to DragonUI's maintainer and says what makes it deletable.
+integration\DragonUIProtection.lua
 
 # --- qa: in-game harness + manifest (owner: QA/Harness Engineer) ---
 qa\Harness.lua
