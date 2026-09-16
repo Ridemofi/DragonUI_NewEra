@@ -297,7 +297,8 @@ T._WireNode = wireNode
 -- wins. Node art is a HARD obstacle; the rank text under each icon is a soft one
 -- (avoided when there's an alternative, crossed when there isn't). Ties fall to the
 -- straightest path, so an aligned link stays a single unbroken run, and a bent one
--- leaves the prereq's SIDE and drops into the dependent from above (see SIDE_EXIT).
+-- leaves one talent's FLANK and arrives at the other's, with its long run passing
+-- beside the rows it travels rather than over them (see STUB_VERTICAL).
 -- ----------------------------------------------------------------------------
 local sqrt, abs, floor = math.sqrt, math.abs, math.floor
 local DOT_SIZE, DOT_GAP, HEAD_SIZE, FLOW_SPEED = 4, 9, 7, 16
@@ -306,11 +307,17 @@ local DOT_SIZE, DOT_GAP, HEAD_SIZE, FLOW_SPEED = 4, 9, 7, 16
 -- enough that any collision-free route beats any route through a node.
 local NODE_PAD  = 2                     -- slack around the art before a line counts as "through" it
 local HIT_HARD, HIT_SOFT, BEND_COST = 1000, 6, 4
--- A bent edge should leave its PREREQ sideways and drop into the dependent from above, not drop out
--- of the prereq's underside and slide into the dependent's flank. Charged against any bent path whose
--- first leg is vertical. Above HIT_SOFT (so it outranks clipping a rank number) and far below
--- HIT_HARD (so it never argues a line through a node). Straight runs are exempt — they have no bend.
-local SIDE_EXIT = 7
+-- A BENT edge should meet both talents at a flank: out of the prereq's side, down the gap beside the
+-- columns, and back in at the dependent's side. The long run then travels next to the rows instead of
+-- arriving over a talent's art, which is what a vertical stub into the top or bottom of an icon looks
+-- like. Charged once per end whose stub is vertical, so a shape with one is beaten by a shape with
+-- none even though it carries an extra bend. Above HIT_SOFT (so it outranks clipping a rank number)
+-- and far below HIT_HARD (so it never argues a line through a node).
+--
+-- STRAIGHT runs are exempt and stay exactly as they were: a prereq sitting directly above its
+-- dependent still draws as one unbroken vertical into the top of the icon. There is no side for that
+-- line to come from, and bending it out and back would be worse than what it fixes.
+local STUB_VERTICAL = 7
 local RANK_HALF_W, RANK_DROP, RANK_H = 11, 1, 12   -- the "3/5" box hanging under an icon
 local EMPTY = {}
 
@@ -377,7 +384,10 @@ end
 local function pathCost(pts, rects, skipA, skipB)
   local n = #pts / 2
   local cost = (n - 2) * BEND_COST
-  if n > 2 and abs(pts[3] - pts[1]) < 0.5 then cost = cost + SIDE_EXIT end
+  if n > 2 then
+    if abs(pts[3] - pts[1]) < 0.5 then cost = cost + STUB_VERTICAL end                -- leaves over the prereq
+    if abs(pts[n * 2 - 1] - pts[n * 2 - 3]) < 0.5 then cost = cost + STUB_VERTICAL end -- arrives over the dependent
+  end
   for i = 1, n - 1 do
     local ax, ay = pts[i * 2 - 1], pts[i * 2]
     local bx, by = pts[i * 2 + 1], pts[i * 2 + 2]
@@ -426,10 +436,25 @@ local function routeCandidates(tf, sx, sy, ex, ey, sTier, dTier)
   if abs(ex - sx) < 0.5 or abs(ey - sy) < 0.5 then
     out[#out + 1] = { sx, sy, ex, ey }
   end
+  -- Side-to-side: out of the prereq's flank, down the gap between the two columns, back in at the
+  -- dependent's flank. This is the shape the cost model wants (see STUB_VERTICAL) — its long leg
+  -- runs BESIDE the rows it crosses, so it never comes down onto a talent's art. The lane is the
+  -- midpoint between the two columns, plus the clear lanes the detour search already knows about,
+  -- for when something is parked in that gap.
   local lo, hi = sTier, dTier
   if lo > hi then lo, hi = hi, lo end
-  -- Corridors available to a sideways jog, nearest the DEPENDENT first: entering a talent from
-  -- directly above reads as "this is what feeds it" better than sliding in from the side.
+  local flankLanes = {}
+  if abs(ex - sx) > 0.5 then flankLanes[1] = (sx + ex) / 2 end
+  if hi > lo then
+    local clear = sideLanes(rects, lo, hi, sx)
+    for i = 1, math.min(#clear, 2) do flankLanes[#flankLanes + 1] = clear[i] end
+  end
+  for i = 1, #flankLanes do
+    local lx = flankLanes[i]
+    out[#out + 1] = { sx, sy, lx, sy, lx, ey, ex, ey }
+  end
+  -- Corridors available to a sideways jog, nearest the DEPENDENT first. Kept as the fallback for
+  -- when every flank-to-flank lane is blocked; it costs two vertical stubs to use.
   local corridors = {}
   if hi > lo then
     if dTier >= sTier then
@@ -445,8 +470,8 @@ local function routeCandidates(tf, sx, sy, ex, ey, sTier, dTier)
     local g = corridors[i]
     if g then out[#out + 1] = { sx, sy, sx, g, ex, g, ex, ey } end
   end
-  -- Plain Ls (one bend, so these win over a Z whenever they're clear). Side-exit first: it's the
-  -- preferred shape (see SIDE_EXIT), and the vertical-first one is the fallback when it's blocked.
+  -- Plain Ls. One bend each, but each also meets one of the two talents head-on, so a clear
+  -- flank-to-flank lane above outscores them despite carrying the extra bend.
   out[#out + 1] = { sx, sy, ex, sy, ex, ey }
   out[#out + 1] = { sx, sy, sx, ey, ex, ey }
   -- Two rows or more apart: allow a swing out into a clear lane to get around a node sitting on the
