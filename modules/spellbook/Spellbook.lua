@@ -89,6 +89,8 @@ local BOOKTYPE_PET_   = BOOKTYPE_PET or "pet"
 SB.cards     = SB.cards or {}
 SB.headers   = SB.headers or {}
 SB.catTabs   = SB.catTabs or {}
+SB.spreads   = SB.spreads or {}    -- ["<category>_<page>"] = that spread's container frame
+SB.catPages  = SB.catPages or {}   -- [category] = how many pages it needs
 SB.bgParts   = SB.bgParts or {}
 SB.page      = SB.page or 1
 SB.selected  = SB.selected or 1
@@ -139,6 +141,130 @@ SB._loadFilterOpts = loadFilterOpts
 local function registerSheen(node)
   node._wantSheen = true
   if SB.RegisterSheen then pcall(SB.RegisterSheen, node) end
+end
+
+-- ============================================================================
+-- IN-COMBAT NAVIGATION (issue #72).
+--
+-- Why the book used to freeze in combat: the card icon buttons are SecureActionButtons, and
+-- protection propagates UP a frame's ancestry — a frame counts as protected if ANY descendant is
+-- (Wow.exe 3.3.5a walks the child list in its IsProtected). So every card, and the host, and the
+-- window are protected, and insecure code may not Show / Hide / SetPoint / SetParent / SetAttribute
+-- a protected frame while InCombatLockdown(). Paging and tab switching did all four, so they bailed.
+--
+-- What changes: nothing is laid out in combat any more, because everything is laid out BEFORE it.
+-- Each (category, page) spread gets its OWN container with its own cards, built and positioned out
+-- of combat. Navigating is then one Hide and one Show on two protected containers — which a
+-- restricted-environment snippet may do. The nav buttons became SecureHandlerClick buttons whose
+-- snippet flips the containers and writes the new position back onto the pager's attributes; their
+-- insecure PostClick reads that back and repaints the page label and tab art, which is legal in
+-- combat because text and textures are not protected, only frame operations are.
+--
+-- Still deferred to PLAYER_REGEN_ENABLED, deliberately: the search box, the cog filters, and any
+-- rebuild from learning a spell. Those change WHICH cards exist, and binding a card needs
+-- SetAttribute plus SetPoint on protected frames — the restricted environment has no route to
+-- create or re-bind one, so there is nothing to be gained by trying.
+-- ============================================================================
+
+-- Shared state + frameref holder for the nav snippets. EXPLICITLY protected: RestrictedFrames only
+-- files a handle as permanently-valid if IsProtected()'s second (explicit) return is true — see the
+-- same note in Window.lua, which is what issue #72 actually tripped over.
+local function pagerFrame()
+  if SB.pager then return SB.pager end
+  local h = host()
+  if not h then return nil end
+  local p = CreateFrame("Frame", "NE_SpellBookPager", h, "SecureFrameTemplate")
+  p:SetSize(1, 1)
+  p:SetPoint("TOPLEFT")
+  SB.pager = p
+  return p
+end
+
+-- One container per (category, page), filling the host. Cards are parented into it, so showing a
+-- page is a single Show on the container and the cards inside it are never touched.
+local function spreadFrame(cat, page)
+  local key = cat .. "_" .. page
+  local f = SB.spreads[key]
+  if f then return f end
+  local h = host()
+  if not h then return nil end
+  f = CreateFrame("Frame", "NE_SpellBookSpread" .. key, h, "SecureFrameTemplate")
+  f:SetAllPoints(h)
+  -- Level-match the host so the cards inside land exactly where they used to (host + 1): above the
+  -- page art, below the category tabs and the paging/search/cog row.
+  f:SetFrameLevel(h:GetFrameLevel() or 1)
+  f:Hide()
+  SB.spreads[key] = f
+  local p = pagerFrame()
+  if p and SecureHandlerSetFrameRef then SecureHandlerSetFrameRef(p, "s" .. key, f) end
+  return f
+end
+
+-- The snippet every nav button runs. A page button carries navdir (-1/+1); a category tab carries
+-- navcat. Clamping happens HERE rather than by disabling the button, because Disable() is itself a
+-- protected operation we cannot perform in combat.
+local NAV_SNIPPET = [=[
+  local pager = self:GetFrameRef("pager")
+  if not pager then return end
+  local cat  = pager:GetAttribute("cat")  or 1
+  local page = pager:GetAttribute("page") or 1
+  local newCat, newPage = cat, page
+  local target = self:GetAttribute("navcat")
+  if target then
+    if target == cat then return end
+    newCat, newPage = target, 1
+  else
+    newPage = page + (self:GetAttribute("navdir") or 0)
+  end
+  local maxPage = pager:GetAttribute("pages" .. newCat) or 1
+  if newPage < 1 then newPage = 1 elseif newPage > maxPage then newPage = maxPage end
+  if newCat == cat and newPage == page then return end
+  local nextSpread = pager:GetFrameRef("s" .. newCat .. "_" .. newPage)
+  if not nextSpread then return end
+  local curSpread = pager:GetFrameRef("s" .. cat .. "_" .. page)
+  if curSpread then curSpread:Hide() end
+  nextSpread:Show()
+  pager:SetAttribute("cat", newCat)
+  pager:SetAttribute("page", newPage)
+]=]
+
+-- Insecure half of a nav click: the snippet has already moved the view, so this only catches the
+-- Lua-side state up and repaints. Out of combat a category change takes the full Refresh, which is
+-- what re-reads the Upcoming tab's data and re-fits the tab strip.
+local function navPostClick(self)
+  local p = SB.pager
+  if not p then return end
+  local cat  = p:GetAttribute("cat")  or SB.selected
+  local page = p:GetAttribute("page") or SB.page
+  -- A category with nothing in it has no container, so the snippet refused to move. Out of combat
+  -- there is no such limit, and an empty tab should still select (and show its empty page).
+  if not InCombatLockdown() and self then
+    local want = self:GetAttribute("navcat")
+    if want and want ~= cat then cat, page = want, 1 end
+  end
+  local changedCategory = (cat ~= SB.selected)
+  SB.selected, SB.page = cat, page
+  if changedCategory then
+    SB.userPickedCategory = true
+    SB.trainingDirty = true
+    if not InCombatLockdown() then
+      if SB.Refresh then SB.Refresh() end
+      return
+    end
+  end
+  if SB.SyncNav then SB.SyncNav() end
+end
+
+-- Wire a button to the pager. `dir` for prev/next, `catID` for a category tab.
+local function wireNav(btn, dir, catID)
+  local p = pagerFrame()
+  if not (btn and p) then return btn end
+  if btn.SetFrameRef then btn:SetFrameRef("pager", p) end
+  if dir then btn:SetAttribute("navdir", dir) end
+  if catID then btn:SetAttribute("navcat", catID) end
+  btn:SetAttribute("_onclick", NAV_SNIPPET)
+  btn:SetScript("PostClick", navPostClick)
+  return btn
 end
 
 -- Icon resolution — slot texture first, spellID texture fallback.
@@ -251,8 +377,10 @@ end
 -- ============================================================================
 -- CARD FACTORY. One spell = one card (backplate + 40x40 secure icon button + name/subname).
 -- ============================================================================
-local function createCard(i)
-  local h = host()
+-- `parent` is the (category, page) spread container the card belongs to — see the IN-COMBAT
+-- NAVIGATION note. Falls back to the host so a stray caller still gets a working card.
+local function createCard(i, parent)
+  local h = parent or host()
   local card = CreateFrame("Frame", "NE_SpellBookCard" .. i, h)
   card:SetSize(CARD_W, CARD_H)
 
@@ -641,17 +769,45 @@ local function categoryTab(i)
   t:SetID(i)
   t:SetHeight(TAB_H_INACTIVE)
   t:SetScript("OnClick", function(self)
+    SB.SelectCategory(self:GetID())   -- out-of-combat fallback; the secure overlay normally has it
+  end)
+  -- Raise the tab above the book-background textures so it isn't painted over. Done BEFORE the nav
+  -- overlay is built, so the overlay's level is measured against the tab's final one.
+  if t.SetFrameLevel then t:SetFrameLevel((h:GetFrameLevel() or 1) + 6) end
+  -- The click that actually lands is this transparent SecureHandlerClick button sitting on the
+  -- tab, which is what lets a tab be switched in combat (see the IN-COMBAT NAVIGATION note). It is
+  -- a separate frame rather than a second template on the tab itself because
+  -- CharacterFrameTabButtonTemplate brings its own OnClick (it drives the CHARACTER frame's tabs)
+  -- and which of two inherited templates wins a script is not something to bet a click on.
+  local nav = CreateFrame("Button", "NE_SpellBookPageTab" .. i .. "Nav", t, "SecureHandlerClickTemplate")
+  nav:SetAllPoints(t)
+  nav:SetFrameLevel((t:GetFrameLevel() or 1) + 2)
+  wireNav(nav, nil, i)
+  nav:HookScript("PostClick", function()
     if PlaySound and SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_TAB then PlaySound(SOUNDKIT.IG_CHARACTER_INFO_TAB)
     elseif PlaySound then PlaySound("igCharacterInfoTab") end
-    SB.SelectCategory(self:GetID())
   end)
+  t._nav = nav
   if NE.tabs and NE.tabs.ReskinClassicTab then NE.tabs.ReskinClassicTab(t:GetName()) end
+  -- The overlay owns the mouse now, so the tab's HIGHLIGHT-layer glow would never draw again (that
+  -- layer only renders while ITS OWN frame is hovered). Move the glow to a normal layer and drive
+  -- it from the overlay's hover; setTabArt still decides how bright it may get.
+  local hl = t._neCustomHL
+  if hl then
+    for _, tex in pairs(hl) do
+      if tex.SetDrawLayer then tex:SetDrawLayer("OVERLAY") end
+      tex:SetAlpha(0)
+    end
+    nav:SetScript("OnEnter", function()
+      for _, tex in pairs(hl) do tex:SetAlpha(t._hlAlpha or 0.4) end
+    end)
+    nav:SetScript("OnLeave", function()
+      for _, tex in pairs(hl) do tex:SetAlpha(0) end
+    end)
+  end
   -- NOTE: MakeTopTab (vertical-flip polish) anchored the tab body rising UP into the chrome
   -- title band, where it was clipped/covered → tabs looked invisible. Dropped: plain
   -- bottom-anchored tabs read normally and stay on the header band (correctness over polish).
-  -- Raise the tabs above the book-background textures so they're not painted over.
-  local h2 = host()
-  if h2 and t.SetFrameLevel then t:SetFrameLevel((h2:GetFrameLevel() or 1) + 6) end
   SB.catTabs[i] = t
   return t
 end
@@ -670,14 +826,61 @@ local function setTabArt(tab, selected)
   end
   set("Left",  not selected); set("Middle",  not selected); set("Right",  not selected)
   set("LeftDisabled", selected); set("MiddleDisabled", selected); set("RightDisabled", selected)
-  if tab.SetHeight then tab:SetHeight(selected and TAB_H_ACTIVE or TAB_H_INACTIVE) end
+  -- The tab is a secure handler now, so SetHeight is a protected operation: in combat the art
+  -- swaps but the active tab keeps the inactive height until PLAYER_REGEN_ENABLED re-renders.
+  if tab.SetHeight and not InCombatLockdown() then
+    tab:SetHeight(selected and TAB_H_ACTIVE or TAB_H_INACTIVE)
+  end
   local hl = tab._neCustomHL
   if hl then
+    -- How bright the hover glow is allowed to get: muted to nothing on the selected tab so it does
+    -- not bleed over the gold art. Applying it is the nav overlay's job (see categoryTab), so paint
+    -- it now only if the mouse is already sitting there.
     local a = selected and 0 or 0.4
-    if hl.left   and hl.left.SetAlpha   then hl.left:SetAlpha(a)   end
-    if hl.middle and hl.middle.SetAlpha then hl.middle:SetAlpha(a) end
-    if hl.right  and hl.right.SetAlpha  then hl.right:SetAlpha(a)  end
+    tab._hlAlpha = a
+    local nav = tab._nav
+    local shown = (nav and not (nav.IsMouseOver and nav:IsMouseOver())) and 0 or a
+    if hl.left   and hl.left.SetAlpha   then hl.left:SetAlpha(shown)   end
+    if hl.middle and hl.middle.SetAlpha then hl.middle:SetAlpha(shown) end
+    if hl.right  and hl.right.SetAlpha  then hl.right:SetAlpha(shown)  end
   end
+end
+
+-- Repaint everything that says WHERE we are: the page counter and the tab art. Safe in combat —
+-- it only writes text, textures and alpha, never a frame operation. The prev/next enable state is
+-- the exception (Disable is protected), so in combat the snippet's own clamp stands in for it.
+function SB.SyncNav()
+  local total = SB.catPages[SB.selected] or SB.totalPages or 1
+  local p = SB.paging
+  if p then
+    p.label:SetText(("Page %d/%d"):format(SB.page, total))
+    if not InCombatLockdown() then
+      if p.prev.SetEnabled then p.prev:SetEnabled(SB.page > 1)
+      elseif SB.page > 1 then p.prev:Enable() else p.prev:Disable() end
+      if p.next.SetEnabled then p.next:SetEnabled(SB.page < total)
+      elseif SB.page < total then p.next:Enable() else p.next:Disable() end
+      p:Show()   -- the bar holds the (protected) nav buttons, so Show is protected too
+    end
+  end
+  for i, t in ipairs(SB.catTabs) do setTabArt(t, i == SB.selected) end
+end
+
+-- Show one spread and hide the rest, and publish the position + page counts the nav snippet reads.
+-- Out of combat only: Show/Hide on a protected container is exactly what the snippet exists for.
+function SB.ShowSpread(cat, page)
+  if InCombatLockdown() then SB.SyncNav(); return end
+  local target = SB.spreads[cat .. "_" .. page]
+  for _, f in pairs(SB.spreads) do
+    if f ~= target then f:Hide() end
+  end
+  if target then target:Show() end
+  local p = SB.pager
+  if p then
+    p:SetAttribute("cat", cat)
+    p:SetAttribute("page", page)
+    for c, n in pairs(SB.catPages) do p:SetAttribute("pages" .. c, n) end
+  end
+  SB.SyncNav()
 end
 
 -- ============================================================================
@@ -769,18 +972,17 @@ local function buildPaging()
   p.label:SetShadowColor(0, 0, 0, 0)
   do local f, _, g = p.label:GetFont(); if f and FONT_PAGE_SIZE > 0 then p.label:SetFont(f, FONT_PAGE_SIZE, g) end end
 
-  local function pageButton(prefix, onClick)
-    local b = CreateFrame("Button", nil, p)
+  local function pageButton(prefix, dir)
+    local b = CreateFrame("Button", "NE_SpellBook" .. prefix .. "PageButton", p, "SecureHandlerClickTemplate")
     b:SetSize(32, 32)
     b:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. prefix .. "Page-Up")
     b:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. prefix .. "Page-Down")
     b:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. prefix .. "Page-Disabled")
     b:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
-    b:SetScript("OnClick", onClick)
-    return b
+    return wireNav(b, dir, nil)
   end
-  p.prev = pageButton("Prev", function() SB.SetPage(SB.page - 1) end)
-  p.next = pageButton("Next", function() SB.SetPage(SB.page + 1) end)
+  p.prev = pageButton("Prev", -1)
+  p.next = pageButton("Next", 1)
   p.next:SetPoint("RIGHT", 0, 0)
   p.prev:SetPoint("RIGHT", p.next, "LEFT", -8, 0)
 
@@ -788,11 +990,13 @@ local function buildPaging()
   return p
 end
 
+-- Out-of-combat page change (cog, search, a fresh render). The spreads are already built, so this
+-- is only a swap — no reflow. In combat the nav snippet does the same swap without us.
 function SB.SetPage(n)
-  local total = SB.totalPages or 1
+  local total = SB.catPages[SB.selected] or SB.totalPages or 1
   if n < 1 then n = 1 elseif n > total then n = total end
   SB.page = n
-  SB.RenderCards()
+  SB.ShowSpread(SB.selected, n)
 end
 
 -- ============================================================================
@@ -928,10 +1132,12 @@ local function addTrainingCards(els)
   end
 end
 
-local function buildElements()
+-- `which` defaults to the selected category. RenderCards passes each index in turn, because every
+-- category's spreads are built ahead of time so tabs can be switched in combat.
+local function buildElements(which)
   local cats = SB.categories or buildCategories()
   if SB.selected > #cats then SB.selected = 1 end
-  local cat = cats[SB.selected]
+  local cat = cats[which or SB.selected]
   local els = {}
 
   if cat then
@@ -952,7 +1158,7 @@ local function buildElements()
       if sec then addCards(els, sec.offset, sec.numSlots, BOOKTYPE_SPELL_) end
     end
   end
-  SB.elements = els
+  if not which or which == SB.selected then SB.elements = els end
   return els
 end
 SB._buildElements = buildElements
@@ -974,7 +1180,7 @@ local function flowLayout(els)
   end
   local maxP = 0
   for _, e in ipairs(els) do if e.p and e.p > maxP then maxP = e.p end end
-  SB.totalPages = math.max(1, math.ceil((maxP + 1) / (SB.minimized and 1 or 2)))
+  return math.max(1, math.ceil((maxP + 1) / (SB.minimized and 1 or 2)))
 end
 
 -- Cell → (point, relPoint, x, y). Left page from host LEFT; right page from host RIGHT.
@@ -990,8 +1196,8 @@ end
 -- ============================================================================
 -- SECTION HEADER — list-backplate plate + SystemFont_Huge2 title + divider.
 -- ============================================================================
-local function createHeader(i)
-  local h = CreateFrame("Frame", nil, host())
+local function createHeader(i, parent)
+  local h = CreateFrame("Frame", nil, parent or host())
   h:SetSize(SPAN_W, 51)
   h.Plate = h:CreateTexture(nil, "BACKGROUND")
   NE.tex.SetAtlas(h.Plate, "spellbook-list-backplate", false)
@@ -1051,7 +1257,7 @@ SB.UpdateAutoCast = SB.UpdateActiveOverlay   -- back-compat alias
 function SB.UpdateActiveOverlays()
   if not SB.cards then return end
   for _, card in pairs(SB.cards) do
-    if card and card.IsShown and card:IsShown() then SB.UpdateActiveOverlay(card) end
+    if card and card.IsVisible and card:IsVisible() then SB.UpdateActiveOverlay(card) end
   end
 end
 
@@ -1079,7 +1285,7 @@ SB.SetCardCooldown = setCardCooldown
 function SB.UpdateCooldowns()
   if not SB.cards then return end
   for _, card in pairs(SB.cards) do
-    if card and card.IsShown and card:IsShown() then setCardCooldown(card) end
+    if card and card.IsVisible and card:IsVisible() then setCardCooldown(card) end
   end
 end
 
@@ -1215,58 +1421,63 @@ local function applyCardVisual(card, e)
 end
 
 -- ============================================================================
--- RENDER the current spread.
+-- RENDER every category into its own per-(category, page) containers, then show the current one.
+-- Building EVERY spread up front, not just the visible one, is what lets the nav snippet page and
+-- switch tabs in combat — see the IN-COMBAT NAVIGATION note. It costs one card per spellbook entry
+-- instead of one per visible cell, which is the same order as any bag addon's item buttons.
 -- ============================================================================
 function SB.RenderCards()
-  -- The card icon buttons are secure; reflowing in combat is forbidden. Defer to regen.
+  -- Binding a card is SetParent + SetPoint + SetAttribute on protected frames. None of that is
+  -- possible in combat, so a rebuild waits for PLAYER_REGEN_ENABLED exactly as it always did.
   if InCombatLockdown() then SB.refreshQueued = true; return end
 
-  local els = SB.elements or {}
-  flowLayout(els)
-  if SB.page > (SB.totalPages or 1) then SB.page = SB.totalPages or 1 end
-
-  local curSpread = SB.page - 1
-  local h = host()
+  local cats = SB.categories or buildCategories()
+  if SB.selected > #cats then SB.selected = 1 end
+  local perSpread = SB.minimized and 1 or 2
   local ci, hi = 0, 0
-  for _, e in ipairs(els) do
-    local onSpread = (math.floor((e.p or 0) / (SB.minimized and 1 or 2)) == curSpread)
-    if e.kind == "card" then
-      ci = ci + 1
-      local card = SB.cards[ci] or createCard(ci)
-      if onSpread then
+  local live = {}
+
+  for c = 1, #cats do
+    local els = buildElements(c)
+    local pages = flowLayout(els)
+    SB.catPages[c] = pages
+    if c == SB.selected then SB.totalPages = pages end
+    for _, e in ipairs(els) do
+      local page = math.floor((e.p or 0) / perSpread) + 1
+      local spread = spreadFrame(c, page)
+      live[c .. "_" .. page] = true
+      if e.kind == "card" then
+        ci = ci + 1
+        local card = SB.cards[ci] or createCard(ci, spread)
+        if card:GetParent() ~= spread then card:SetParent(spread) end
         local pt, rp, x, y = pagePoint(e.p, e.r, e.c)
-        card:ClearAllPoints(); card:SetPoint(pt, h, rp, x, y)
+        card:ClearAllPoints(); card:SetPoint(pt, spread, rp, x, y)
         applyCardVisual(card, e)
         setCardCooldown(card)   -- paint the cooldown swipe if the spell is on cooldown
-        card:Show()
-      else
-        card:Hide()
-      end
-    else  -- section header
-      hi = hi + 1
-      local hd = SB.headers[hi] or createHeader(hi)
-      if onSpread then
+        card:Show()             -- the container it sits in is what hides the page
+      else  -- section header
+        hi = hi + 1
+        local hd = SB.headers[hi] or createHeader(hi, spread)
+        if hd:GetParent() ~= spread then hd:SetParent(spread) end
         local pt, rp, x, y = pagePoint(e.p, e.r, 0)
         if (e.r or 0) > 0 then y = y - SECTION_TOP_GAP end
-        hd:ClearAllPoints(); hd:SetPoint(pt, h, rp, x, y)
+        hd:ClearAllPoints(); hd:SetPoint(pt, spread, rp, x, y)
         hd.Text:SetText(e.label or "")
         hd:Show()
-      else
-        hd:Hide()
       end
     end
   end
   for i = ci + 1, #SB.cards   do SB.cards[i]:Hide()   end
   for i = hi + 1, #SB.headers do SB.headers[i]:Hide() end
-
-  if SB.paging then
-    SB.paging.label:SetText(("Page %d/%d"):format(SB.page, SB.totalPages or 1))
-    if SB.paging.prev.SetEnabled then SB.paging.prev:SetEnabled(SB.page > 1)
-    elseif SB.page > 1 then SB.paging.prev:Enable() else SB.paging.prev:Disable() end
-    if SB.paging.next.SetEnabled then SB.paging.next:SetEnabled(SB.page < (SB.totalPages or 1))
-    elseif SB.page < (SB.totalPages or 1) then SB.paging.next:Enable() else SB.paging.next:Disable() end
-    SB.paging:Show()
+  -- A filter or a respec can leave a container with nothing in it; an empty page must not remain
+  -- reachable, or the snippet would page into blank parchment.
+  for key, f in pairs(SB.spreads) do
+    if not live[key] then f:Hide() end
   end
+
+  if SB.page > (SB.catPages[SB.selected] or 1) then SB.page = SB.catPages[SB.selected] or 1 end
+  SB._rendered = true          -- the window agent warms this at login so a first open in combat works
+  SB.ShowSpread(SB.selected, SB.page)
 end
 
 -- ============================================================================
@@ -1322,7 +1533,6 @@ local function buildSearch()
     if q ~= SB.search then
       SB.search = q
       SB.page = 1
-      buildElements()
       SB.RenderCards()
     end
   end
@@ -1383,10 +1593,10 @@ local function buildCogMenu(cog)
 
   menu.cbPassives = checkRow(SPELLBOOK_FILTER_PASSIVES or "Hide Passives",
     function() return SB.hidePassives end,
-    function(v) SB.hidePassives = v; saveOpts(); SB.page = 1; buildElements(); SB.RenderCards() end, -30)
+    function(v) SB.hidePassives = v; saveOpts(); SB.page = 1; SB.RenderCards() end, -30)
   menu.cbRanks = checkRow("Show All Ranks",
     function() return SB.showRanks end,
-    function(v) SB.showRanks = v; saveOpts(); SB.page = 1; buildElements(); SB.RenderCards() end, -54)
+    function(v) SB.showRanks = v; saveOpts(); SB.page = 1; SB.RenderCards() end, -54)
   -- Glow active spells (the WeakAuras ants on spells whose buff is currently up). Toggling re-evaluates
   -- every visible card's overlay immediately (turning glows on/off without a full re-render).
   menu.cbGlow = checkRow("Glow active spells",
@@ -1459,7 +1669,14 @@ end
 function SB.Refresh()
   if not SB._built then SB.Build() end
   if not host() then return end
-  if InCombatLockdown() then SB.refreshQueued = true end
+  -- The category tabs are secure handlers now, so re-fitting the tab strip (SetWidth / SetPoint /
+  -- Show) is a protected operation. A full refresh therefore waits for the end of combat instead
+  -- of running half of itself into blocked-action errors; navigation still works meanwhile.
+  if InCombatLockdown() then
+    SB.refreshQueued = true
+    if SB.SyncNav then SB.SyncNav() end
+    return
+  end
 
   buildSearch()
   buildCog()
@@ -1513,7 +1730,6 @@ function SB.Refresh()
   end
   for i = #cats + 1, #SB.catTabs do SB.catTabs[i]:Hide() end
 
-  buildElements()
   SB.RenderCards()
 end
 

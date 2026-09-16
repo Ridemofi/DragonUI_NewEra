@@ -19,6 +19,7 @@ A standalone War-Within-style two-page spellbook, replacing the 3.3.5a `SpellBoo
 - **Active vs passive** — active spells use the gold spellbook frame; passives use the dark square talent-node socket. Passive cells are click-inert (hover for tooltip only); pet cells ignore right-click.
 - **Whole-cell interaction** — click anywhere on a cell to cast, drag to place it on a bar, hover anywhere for the tooltip.
 - **Search + options** — filter spells by name; a cog menu toggles *Hide Passives* and *Show All Ranks* (off = highest rank only).
+- **Works in combat** — the book opens, pages and switches tabs mid-fight. Every page is built ahead of time and the nav buttons are secure handlers, so navigating never touches a protected frame from insecure code. Search and the cog filters still wait for the end of combat, since those change which cards exist.
 
 Built natively for 3.3.5a's index-based spellbook API (a compat shim maps the Cataclysm `GetSpellBookItem*` family onto it).
 

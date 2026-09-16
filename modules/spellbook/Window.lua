@@ -230,7 +230,16 @@ end
 local function buildWindow()
   if SB.frame then return SB.frame end
 
-  local f = CreateFrame("Frame", FRAME_NAME, UIParent)
+  -- EXPLICITLY protected (SecureFrameTemplate = protected="true"), and that is load-bearing, not
+  -- decoration. RestrictedFrames files a frame handle under Protected_Frames only if the SECOND
+  -- return of IsProtected() (explicit) is true; everything else goes to Other_Frames, where an
+  -- in-combat lookup is refused unless the frame is protected *at that moment*. This window is
+  -- otherwise only protected by INHERITANCE from the secure spell cards inside it — and those are
+  -- created lazily on the first render. So a player who logged in and entered combat without ever
+  -- opening the book had an unprotected window: the toggle snippet's GetFrameRef("frame") threw
+  -- "Invalid frame handle" and the book would not open at all (issue #72). Explicit protection
+  -- makes the handle valid from creation, whatever has or hasn't been rendered yet.
+  local f = CreateFrame("Frame", FRAME_NAME, UIParent, "SecureFrameTemplate")
   -- The red 3-slice is the addon's standard button; Watch keeps this window's panel buttons
   -- skinned as its panes are built (core/ButtonSkin.lua). Opt out per button with _neNoSkin.
   if NE.buttonskin and NE.buttonskin.Watch then pcall(NE.buttonskin.Watch, f) end
@@ -532,6 +541,12 @@ SB.InterceptBlizzard = interceptBlizzard
 -- file may load after this one). Live events refresh while shown; PLAYER_REGEN_ENABLED flushes
 -- the queued refresh + re-applies width.
 -- ----------------------------------------------------------------------------
+-- Render the whole book once, out of combat, so every page exists before it is ever needed.
+local function warmPages()
+  if InCombatLockdown() or SB._rendered or not SB.Refresh then return end
+  guard("warmPages", SB.Refresh)
+end
+
 local function boot(event)
   if event == "PLAYER_LOGIN" then
     loadOpts()                          -- restore persisted minimized state before first render
@@ -543,6 +558,11 @@ local function boot(event)
     guard("keyOverride",   applyKeyOverride)
     SB.ApplyWidth()                     -- size to the restored state
     if SB.Build then guard("build", SB.Build) end   -- renderer builds content (guarded)
+    -- WARM the pages a few seconds after login. The renderer pre-builds every page of every
+    -- category so they can be navigated in combat, but it can only do that OUT of combat — so if
+    -- the first time you ever open the book is mid-fight, an unwarmed book opens empty. Deferred
+    -- rather than done here so it stays off the login spike.
+    if C_Timer and C_Timer.After then C_Timer.After(3, warmPages) end
     return
   end
 
@@ -554,10 +574,15 @@ local function boot(event)
   if event == "PLAYER_REGEN_ENABLED" then
     -- Combat ended: flush queued binding refresh, queued window refresh, re-apply width.
     if SB._rebindQueued then guard("keyOverride", applyKeyOverride) end
+    if not SB._rendered then warmPages() end   -- login warm was skipped (still in combat then)
     if SB.refreshQueued then
       SB.refreshQueued = false
       SB.ApplyWidth()
       if SB.frame and SB.frame:IsShown() and SB.Refresh then guard("refresh", SB.Refresh) end
+    elseif SB.SyncNav then
+      -- Paging in combat leaves the things we could not touch then — the prev/next enabled state
+      -- and the selected tab's taller art — a step behind. Catch them up now.
+      guard("syncNav", SB.SyncNav)
     end
     return
   end
