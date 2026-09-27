@@ -81,6 +81,17 @@ simply already satisfied for the symbols it owns.
   (`C_Spell.GetSpellPowerCost`, `C_Map.GetMapInfo`, `C_Map.GetPlayerMapPosition`, and the no-native
   fallback branch of `C_Container.GetContainerItemQuestInfo`). QA's `/dnetest` can dump this.
 
+## Broken-on-some-clients guards
+
+- `GetMapDebugObjectInfo` (`compat/MapDebugObjects.lua`) — not a ClassicAPI gap. Both map-debug
+  functions are dead stubs in 3.3.5a 12340 (`GetNumMapDebugObjects` returns a constant 0,
+  `GetMapDebugObjectInfo` returns nothing), so stock never exercises the loop that reads them. A
+  client with a DLL or exe patch that implements one and not the other makes stock
+  `WorldMapFrame_Update` throw "attempt to compare number with nil" at WorldMapFrame.lua:412. The
+  loop is the last thing that function does, so the cost is the error itself, not lost map work —
+  but it fires on every update and buries real errors. The shim passes a usable answer through untouched and
+  reports an unusable one as a positionless object, which stock's own guard skips.
+
 ## Headline
 
 - `!!!ClassicAPI` is a **hard dependency** and owns `C_Timer`, `C_Texture`, `Mixin`, the bulk of

@@ -28,6 +28,10 @@ compat\C_Container.lua
 compat\C_Item.lua
 compat\C_Spell.lua
 compat\C_Map.lua
+# Not a missing symbol but a broken one: a client whose GetNumMapDebugObjects reports more
+# objects than GetMapDebugObjectInfo can describe makes stock WorldMapFrame_Update throw on
+# every map update. Guards the pair without suppressing a client that implements it properly.
+compat\MapDebugObjects.lua
 compat\SpellBook.lua
 
 compat\Locale.lua

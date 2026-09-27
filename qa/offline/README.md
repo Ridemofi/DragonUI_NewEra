@@ -55,6 +55,15 @@ and a row emptied by user placement — several windows up but the player has pl
 luajit qa/offline/test_panelmgr.lua
 ```
 
+Check the map-debug shim against the client shapes it has to survive (11 assertions: a client
+that implements the pair properly passing through untouched, the reported count-without-info
+client, a half-implemented one, a client missing the getter entirely, and a control proving the
+harness reproduces the original crash without the shim):
+
+```bash
+luajit qa/offline/test_mapdebug.lua
+```
+
 Boot the whole Cooldown Manager stack against a stubbed 3.3.5a client and drive it through a
 realistic event sequence (156 assertions) — load order, mover registration, spellbook rank
 resolution, populate, cooldown start, rank-safe cooldown read, GCD suppression, live settings,
