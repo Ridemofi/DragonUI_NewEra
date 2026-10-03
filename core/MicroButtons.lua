@@ -62,6 +62,13 @@ local ORDER = {
 
 local extras = {}   -- [global name] = { button, enabled = fn }
 
+-- DragonUI's micro-button strip. Its clean-room micromenu rewrite (2026-09) renamed the frame from
+-- pUiMicroMenu to DragonUI_MicroButtonBar; without the new name Layout bailed out and hid every
+-- button we add (Professions, Adventure Guide). Both names are accepted so either DragonUI works.
+local function microMenu()
+  return _G.DragonUI_MicroButtonBar or _G.pUiMicroMenu
+end
+
 local function syncPlate(b)
   if b.nePanelOpen then b.nePlate[1]:Hide(); b.nePlate[2]:Show()
   else b.nePlate[1]:Show(); b.nePlate[2]:Hide() end
@@ -79,7 +86,7 @@ end
 -- spec = { name, art (atlas stem, e.g. "professions"), tooltip (string or fn), onClick, enabled (fn) }
 -- Atlases ui-hud-micromenu-<art>-{up,down,mouseover,disabled}-2x must be registered by the caller.
 function M.Add(spec)
-  local b = CreateFrame("Button", spec.name, _G.pUiMicroMenu or UIParent)
+  local b = CreateFrame("Button", spec.name, microMenu() or UIParent)
   -- DragonUI hardcodes native buttons to 32x40 regardless of the art's 41px height; layout() then
   -- tracks whatever size DragonUI last gave MainMenu (14x19 in grayscale mode).
   b:SetSize(32, 40)
@@ -144,7 +151,7 @@ end
 function M.Layout()
   if not next(extras) then return end
 
-  local pvp, mainMenu, help, menu = _G.PVPMicroButton, _G.MainMenuMicroButton, _G.HelpMicroButton, _G.pUiMicroMenu
+  local pvp, mainMenu, help, menu = _G.PVPMicroButton, _G.MainMenuMicroButton, _G.HelpMicroButton, microMenu()
   if not (pvp and mainMenu and help and menu and pvp:IsVisible()) then hideAll(); return end
 
   -- Edge-to-edge padding between two adjacent buttons we never move. Normally NEGATIVE: DragonUI's

@@ -127,11 +127,11 @@ function NE.tex.GetAtlasRect() return 0, 1, 0, 1 end
 function NE.tex.HasAtlas() return true end
 
 -- DragonUI's strip: MainMenu then Help at the right edge, the rest to their left (stride 26, pad -6).
-pUiMicroMenu = CreateFrame("Frame", "pUiMicroMenu")
+DragonUI_MicroButtonBar = CreateFrame("Frame", "DragonUI_MicroButtonBar") -- current DragonUI's strip (was pUiMicroMenu)
 local NATIVE = { "Character", "Spellbook", "Talent", "Achievement", "QuestLog", "Socials", "LFD",
                  "Collections", "PVP", "MainMenu", "Help" }
 for i, stem in ipairs(NATIVE) do
-  local b = CreateFrame("Button", stem .. "MicroButton", pUiMicroMenu)
+  local b = CreateFrame("Button", stem .. "MicroButton", DragonUI_MicroButtonBar)
   b._left, b._right = i * 26, i * 26 + 32
 end
 
