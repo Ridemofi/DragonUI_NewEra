@@ -83,6 +83,10 @@ M.DEFAULTS = {
   NE_AuctionHouseFrame        = { pushable = 0 },
   -- The LEFT+16 cluster — the windows that actually collided in issue #49 and its neighbours.
   NE_ProfessionsCraftingFrame = { pushable = 1, posKey = "professions" },
+  -- Retail's ProfessionsBookFrame is left/1 too; recency puts a crafting window opened from the
+  -- book to its right.
+  -- Shares the crafting window's position (posKey and home): the two read as one window.
+  NE_ProfessionsBookFrame     = { pushable = 1, posKey = "professions" },
   NE_FriendsFrame             = { pushable = 2 },
   NE_GuildFrame               = { pushable = 2 },
   NE_GroupFinderFrame         = { pushable = 2 },

@@ -64,6 +64,15 @@ harness reproduces the original crash without the shim):
 luajit qa/offline/test_mapdebug.lua
 ```
 
+Check the micro-bar extras and the Professions Book (31 assertions: our buttons' slots in DragonUI's
+right-to-left strip with and without the Adventure Guide, each one hiding with its module, and the
+book expanding a collapsed skill header, ordering primaries, and binding secure spell buttons by
+localized name):
+
+```bash
+luajit qa/offline/test_professionsbook.lua
+```
+
 Boot the whole Cooldown Manager stack against a stubbed 3.3.5a client and drive it through a
 realistic event sequence (156 assertions) — load order, mover registration, spellbook rank
 resolution, populate, cooldown start, rank-safe cooldown read, GCD suppression, live settings,

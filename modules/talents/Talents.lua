@@ -1038,7 +1038,7 @@ end
 
 if NE.modules and NE.modules.Register then
   NE.modules.Register("Talents", {
-    default  = true,
+    default  = false, -- default OFF since DragonUI ships its own (enabled by default there, NeticSoul 2026-10); opt in from the options
     label    = L["Talents Panel"],
     category = "Windows",
     desc     = L["The modern talents window. Turn off to use the standard Blizzard talent window."],

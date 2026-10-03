@@ -83,6 +83,20 @@ local DETAILS_CAP_H = math.floor(100 * (DETAILS_W / 260) + 0.5)   -- 96 for DETA
 -- Reagent rows are narrowed to a left column so their names don't run under the details panel.
 local REAGENT_COL_W = SCHEMATIC_W - DETAILS_W - 70
 
+-- Minimised window (Window.lua C.LAYOUTS.min, ForeverUI's 673x594): the schematic beside the list is
+-- this wide/tall. No room for the details panel there, so the reagent column takes the full width
+-- and rows tighten so eight reagents still clear the Create row.
+local function compactSchematicSize()
+  local lay = C.LAYOUTS and C.LAYOUTS.min or { w = 673, h = 594, list = 304 }
+  return lay.w - 5 - lay.list - 2 - 6, 484     -- 356 x ForeverUI's card height (N.card 360x484)
+end
+C.CompactSchematicSize = compactSchematicSize
+local function isCompact() return C.opts and C.opts.compact and true or false end
+local function reagentGeom()
+  if isCompact() then return compactSchematicSize() - 40, 42 end
+  return REAGENT_COL_W, REAGENT_ROW_H
+end
+
 -- ============================================================================
 -- PROF_MAP 
 -- ============================================================================
@@ -102,7 +116,7 @@ local PROF_MAP = {
   ["Inscription"]    = { kit = "Inscription",   icon = 4620676, fill = "skillbar_fill_flipbook_inscription" },
   ["Jewelcrafting"]  = { kit = "Jewelcrafting", icon = 4620677, fill = "skillbar_fill_flipbook_jewelcrafting" },
   ["Prospecting"]    = { kit = "Jewelcrafting", icon = 4620677, fill = "skillbar_fill_flipbook_jewelcrafting" },
-  ["First Aid"]      = { kit = nil,              icon = "Interface\\Icons\\Spell_Holy_SealOfSacrifice", fill = "skillbar_fill_flipbook_skinning" },
+  ["First Aid"]      = { kit = nil, card = "firstaid", icon = "Interface\\Icons\\Spell_Holy_SealOfSacrifice", fill = "skillbar_fill_flipbook_skinning" },
 }
 
 local function infoFromName(name)
@@ -730,7 +744,7 @@ end
 -- ============================================================================
 local function buildReagentSlot(parent)
   local b = CreateFrame("Frame", nil, parent)
-  b:SetSize(REAGENT_COL_W, REAGENT_ROW_H)
+  b:SetSize(reagentGeom(), REAGENT_ROW_H)
   b:EnableMouse(false)
 
   b.SlotBg = b:CreateTexture(nil, "BACKGROUND")
@@ -1054,11 +1068,12 @@ function C.buildCreateControls(f)
   end
 
   -- [+] / [−] spinners.
-  local minus = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+  local minus = CreateFrame("Button", "NE_ProfessionsCraftingDecrement", f, "UIPanelButtonTemplate")
   minus:SetSize(20, 20); minus:SetText("-"); minus:SetPoint("RIGHT", qtyBox, "LEFT", -8, 0)
   minus:SetScript("OnClick", function()
     local v = qtyBox:GetValue(); if v > 1 then qtyBox:SetText(v - 1) end
   end)
+  f.CreateMinusButton = minus
   local plus = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
   plus:SetSize(20, 20); plus:SetText("+"); plus:SetPoint("LEFT", qtyBox, "RIGHT", 4, 0)
   plus:SetScript("OnClick", function()
@@ -1150,14 +1165,9 @@ function C.buildLinkButton(f)
   link:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Up")
   link:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIcon-Chat-Down")
   link:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
-  link:SetScript("OnClick", function()
-    if ChatEdit_GetActiveWindow then
-      local editBox = ChatEdit_GetActiveWindow()
-      if editBox then
-        local link2 = GetTradeSkillListLink and GetTradeSkillListLink()
-        if link2 then editBox:Insert(link2) end
-      end
-    end
+  link:SetScript("OnClick", function(self)
+    local link2 = GetTradeSkillListLink and GetTradeSkillListLink()
+    if link2 then C.ShowLinkMenu(link2, self) end
   end)
   f.LinkButton = link
 end
@@ -1217,9 +1227,10 @@ function C.SetProfession(name)
 
   -- Themed right-panel parchment.
   if f.SchematicForm and f.SchematicForm.Background then
-    local atlas = (info and info.kit) and ("professions-recipe-background-" .. info.kit:lower())
-                                      or  ATLAS_RECIPE_BG
-    NE.tex.SetAtlas(f.SchematicForm.Background, atlas, false)
+    f.SchematicForm._bgAtlas = (info and info.kit) and ("professions-recipe-background-" .. info.kit:lower())
+                                                    or  ATLAS_RECIPE_BG
+    f.SchematicForm._cardKey = info and (info.card or (info.kit and info.kit:lower())) or nil
+    C.ApplySchematicBackground()
   end
 
   -- Fill + flare atlas for this profession.
@@ -1503,6 +1514,8 @@ function C.UpdateItemDetails(r, link, iconTex)
   local sf = C.frame and C.frame.SchematicForm
   local dp = sf and sf.DetailsPanel
   if not dp then return end
+  -- Minimised: no room beside the reagents; the output icon's tooltip carries the same text.
+  if isCompact() then dp:Hide(); return end
 
   -- Resolve the icon ourselves when the caller didn't pass one, so the details icon never blanks.
   iconTex = iconTex or C.ResolveOutputIcon(r)
@@ -1635,9 +1648,32 @@ end
 -- ============================================================================
 -- C.OnRecipeSelected(r) — populate the SchematicForm with recipe r.
 -- ============================================================================
+-- Cached recipe (RecipeList rendered the saved list before the live one arrived): show what the
+-- cache knows; crafting stays disabled until the live entry replaces it (Window.lua resync).
+local function selectCached(sf, r)
+  local e = (C.Cache and C.Cache.Get(C.CurrentProfKey(), r.name)) or {}
+  sf.OutputIcon._recipe = r
+  if sf.EmptyText then sf.EmptyText:Hide() end
+  sf.OutputIcon.Icon:SetTexture(e.icon or r.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+  sf.OutputIcon.Icon:Show(); sf.OutputIcon:Show()
+  sf.OutputIcon._link = e.link
+  C.FitText(sf.OutputText, r.name or "", C.OutputNameWidth(), 20, 12)
+  sf.OutputText:SetTextColor(1, 1, 1)
+  if sf.RequiresText then
+    if e.tools then sf.RequiresText:SetText(L["Requires: %s"]:format(e.tools)); sf.RequiresText:Show()
+    else sf.RequiresText:Hide() end
+  end
+  if sf.DetailsPanel then sf.DetailsPanel:Hide() end
+  if sf.FavoriteButton then sf.FavoriteButton:SetIsFavorite(isFav(r.name)); sf.FavoriteButton:Show() end
+  C._selected = r
+  C.UpdateReagents(r)
+  C.UpdateCreateButtons(r)
+end
+
 function C.OnRecipeSelected(r)
   local sf = C.frame and C.frame.SchematicForm
   if not (sf and sf.OutputIcon) then return end
+  if r.cached then return selectCached(sf, r) end
   if r.isCraft then
     if SelectCraft then pcall(SelectCraft, r.index) end
   else
@@ -1664,7 +1700,7 @@ function C.OnRecipeSelected(r)
     if mx and mx > 1 then made = (" [%d-%d]"):format(mn or 1, mx)
     elseif mn and mn > 1 then made = (" x%d"):format(mn) end
   end
-  sf.OutputText:SetText((r.name or "") .. made)
+  C.FitText(sf.OutputText, (r.name or "") .. made, C.OutputNameWidth(), 20, 12)
   -- Rarity-color the crafted item's name (falls back to white for enchants with no item quality).
   local nr, ng, nb = 1, 1, 1
   if q and GetItemQualityColor then
@@ -1687,6 +1723,10 @@ function C.OnRecipeSelected(r)
   -- Right-side item-details panel (scanned, wrapped, rarity-colored — sized to its content).
   C.UpdateItemDetails(r, link, icon)
 
+  -- Refresh this recipe's cached details from the live read (Cache.lua keeps the old reagents if the
+  -- live ones are still streaming).
+  if C.Cache and not r.isCraft then C.Cache.StoreDetail(C.CurrentProfKey(), r.name, C.Cache.ReadLive(r.index)) end
+
   C._selected = r
   r._reagentTries = 0   -- fresh selection → allow the reagent-cache retry loop to run again
   C.UpdateReagents(r)
@@ -1701,18 +1741,23 @@ function C.UpdateReagents(r)
   if not sf then return end
   local rc = sf.ReagentContainer; if not rc then return end
 
+  local cachedE = C.Cache and C.Cache.Get(C.CurrentProfKey(), r.name)
+  local cachedR = cachedE and cachedE.reagents
   local numReagents = 0
-  if r.isCraft and GetCraftNumReagents then
+  if r.cached then
+    numReagents = cachedR and #cachedR or 0
+  elseif r.isCraft and GetCraftNumReagents then
     numReagents = GetCraftNumReagents(r.index) or 0
   elseif GetTradeSkillNumReagents then
     numReagents = GetTradeSkillNumReagents(r.index) or 0
   end
+  numReagents = math.min(numReagents, MAX_REAGENT_SLOTS)
 
   -- Ensure enough slot widgets exist.
   local slots = sf._reagentSlots
   for i = #slots + 1, numReagents do
     slots[i] = buildReagentSlot(rc)
-    slots[i]:SetPoint("TOPLEFT", rc, "TOPLEFT", 0, -(i - 1) * REAGENT_ROW_H)
+    slots[i]:SetPoint("TOPLEFT", rc, "TOPLEFT", 0, -(i - 1) * select(2, reagentGeom()))
   end
 
   local incomplete = false
@@ -1723,7 +1768,9 @@ function C.UpdateReagents(r)
       -- Prime the item cache FIRST: querying the reagent link asks the server for the item when it
       -- isn't cached yet — the usual reason a reagent's name/icon comes back nil on first view.
       local rLink
-      if r.isCraft and GetCraftReagentItemLink then
+      if r.cached then
+        rLink = nil
+      elseif r.isCraft and GetCraftReagentItemLink then
         rLink = GetCraftReagentItemLink(r.index, i)
       elseif GetTradeSkillReagentItemLink then
         rLink = GetTradeSkillReagentItemLink(r.index, i)
@@ -1731,22 +1778,32 @@ function C.UpdateReagents(r)
       s._link = rLink   -- for shift/ctrl-click (chat link / dress up)
 
       local rName, rTex, rCount, rHave
-      if r.isCraft and GetCraftReagentInfo then
+      if r.cached then
+        -- nothing live yet; the cache below fills it
+      elseif r.isCraft and GetCraftReagentInfo then
         rName, rTex, rCount, rHave = GetCraftReagentInfo(r.index, i)
       elseif GetTradeSkillReagentInfo then
         rName, rTex, rCount, rHave = GetTradeSkillReagentInfo(r.index, i)
       end
 
+      -- Item not in the client cache yet → our saved copy of this reagent fills the gap.
+      local cr = cachedR and cachedR[i]
+      if cr then
+        rName, rTex, rCount, rLink = rName or cr.name, rTex or cr.icon, rCount or cr.count, rLink or cr.link
+        s._link = rLink
+        if r.cached and GetItemCount and rLink then rHave = GetItemCount(rLink) end
+      end
+
       -- Not fully cached yet → keep the slot (with a placeholder) and flag a retry, so a reagent
       -- is never dropped from the list.
-      if not rName or not rTex then incomplete = true end
+      if (not rName or not rTex) and not r.cached then incomplete = true end
 
       s.Icon:SetTexture(rTex or "Interface\\Icons\\INV_Misc_QuestionMark")
       local rq = rLink and GetItemInfo and select(3, GetItemInfo(rLink)) or nil
       applyItemQualityBorder(s.IconBorder, s.QualityGlow, rq)
       local enough = (rHave or 0) >= (rCount or 1)
       s.Count:SetText(("%d/%d"):format(rHave or 0, rCount or 1))
-      s.Name:SetText(rName or "")
+      C.FitText(s.Name, rName or "", nil, 12, 8)
       local cc = enough and 1 or 0.5
       s.Count:SetVertexColor(cc, cc, cc); s.Name:SetVertexColor(cc, cc, cc)
 
@@ -1807,7 +1864,7 @@ end
 -- only ever ENABLE a button that should be enabled, never disable one that should be usable.
 -- ============================================================================
 function C.LiveNumAvailable(r)
-  if not r then return 0 end
+  if not r or r.cached then return 0 end
 
   local cached = 0
   if r.isCraft and GetCraftInfo then
@@ -1877,4 +1934,160 @@ function C.UpdateCreateButtons(r)
       f.CreateAllButton:SetText(createAllText)
     end
   end
+end
+-- ============================================================================
+-- Max/min re-layout of the schematic's insides (Window.lua C.ApplyLayout calls this).
+-- ============================================================================
+
+-- Maximised: the retail parchment, whole. Minimised: ForeverUI's 360x484 profession card
+-- (profession-background-card-<prof>, TradeSkill.lua F.map; Jewelcrafting / Inscription are our own
+-- cards in the same style). A profession with no card (Herbalism, Skinning, Fishing — no crafting
+-- page anyway) keeps the parchment, cropped to its right-hand part rather than squashed.
+function C.ApplySchematicBackground()
+  local sf = C.frame and C.frame.SchematicForm
+  if not (sf and sf.Background) then return end
+  local card = sf._cardKey and ("profession-background-card-" .. sf._cardKey)
+  if isCompact() and card and NE.tex.HasAtlas(card) and NE.tex.SetAtlas(sf.Background, card, false) then
+    return
+  end
+  local name = sf._bgAtlas or ATLAS_RECIPE_BG
+  if not NE.tex.SetAtlas(sf.Background, name, false) then return end
+  if isCompact() then
+    local l, r, t, b = NE.tex.GetAtlasRect(name)
+    local e = NE.tex._atlasEntry and NE.tex._atlasEntry(name)
+    local w, h = compactSchematicSize()
+    local frac = math.min(1, (w / h) / ((e and e.width and e.height) and (e.width / e.height) or (675 / 548)))
+    sf.Background:SetTexCoord(r - (r - l) * frac, r, t, b)
+  end
+end
+
+function C.LayoutSchematic()
+  local f = C.frame
+  local sf = f and f.SchematicForm
+  if not sf then return end
+  local compact = isCompact()
+  local colW, rowH = reagentGeom()
+  -- Minimised the card stops at ForeverUI's 484 and the Create row sits under it, as in TradeSkill.lua.
+  sf:ClearAllPoints()
+  sf:SetPoint("TOPLEFT", f.RecipeList, "TOPRIGHT", 2, 0)
+  if compact then
+    local w, h = compactSchematicSize()
+    sf:SetPoint("BOTTOMRIGHT", f.RecipeList, "TOPRIGHT", 2 + w, -h)
+  else
+    sf:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 5)
+  end
+  if sf.ReagentContainer then sf.ReagentContainer:SetWidth(colW) end
+  -- The line starts right of the output icon (x 89); minimised it must stop inside the 356 column.
+  if sf.RequiresText then sf.RequiresText:SetWidth(colW - (compact and 70 or 30)) end
+  for i, slot in ipairs(sf._reagentSlots or {}) do
+    slot:SetWidth(colW)
+    slot:ClearAllPoints()
+    slot:SetPoint("TOPLEFT", sf.ReagentContainer, "TOPLEFT", 0, -(i - 1) * rowH)
+  end
+  if sf.DetailsPanel then
+    if compact then sf.DetailsPanel:Hide()
+    elseif C._selected then C.UpdateItemDetails(C._selected, sf.OutputIcon and sf.OutputIcon._link) end
+  end
+  -- Create row: minimised, Create All and Scan AH narrow and close up so the row stays right of
+  -- the recipe list (ForeverUI's Create All sits at the card's left edge).
+  local ca, minus = f.CreateAllButton, f.CreateMinusButton
+  if ca and minus then
+    ca:SetWidth(compact and 90 or 125)
+    ca:ClearAllPoints()
+    ca:SetPoint("RIGHT", minus, "LEFT", compact and -8 or -30, 0)
+    if f.ScanAHButton then
+      f.ScanAHButton:SetWidth(compact and 66 or 100)
+      f.ScanAHButton:ClearAllPoints()
+      f.ScanAHButton:SetPoint("RIGHT", ca, "LEFT", compact and -4 or -8, 0)
+    end
+  end
+  C.ApplySchematicBackground()
+end
+
+-- ============================================================================
+-- Link destination picker (the crafting link button, shift-click in the Professions Book).
+-- Only destinations that apply right now; picking one opens the chat box on that channel with the
+-- link inserted, unsent.
+-- ============================================================================
+
+-- The joined Trade channel: id, name — or nil. GetChannelList() is id, name pairs on 3.3.5a.
+-- ponytail: matched by name against "Trade" / the client's TRADE string; a locale whose channel
+-- name shares no stem with TRADE won't offer it (current chat still covers it when it is active).
+local function tradeChannel()
+  if not GetChannelList then return nil end
+  local list = { GetChannelList() }
+  local want = { "trade" }
+  if type(_G.TRADE) == "string" then want[2] = _G.TRADE:lower() end
+  for i = 1, #list - 1, 2 do
+    local id, name = list[i], list[i + 1]
+    if type(name) == "string" then
+      local n = name:lower()
+      for _, w in ipairs(want) do
+        if n:find(w, 1, true) or w:find(n, 1, true) then return id, name end
+      end
+    end
+  end
+end
+
+function C.LinkDestinations()
+  local out = {}
+  local tid, tname = tradeChannel()
+  if tid then out[#out + 1] = { label = tname, chatType = "CHANNEL", channel = tid } end
+  if GetNumPartyMembers and GetNumPartyMembers() > 0 then out[#out + 1] = { label = _G.PARTY or "Party", chatType = "PARTY" } end
+  if GetNumRaidMembers and GetNumRaidMembers() > 0 then out[#out + 1] = { label = _G.RAID or "Raid", chatType = "RAID" } end
+  if IsInGuild and IsInGuild() then out[#out + 1] = { label = _G.GUILD or "Guild", chatType = "GUILD" } end
+  -- Whatever the chat box is set to now, unless that is one of the above already.
+  local eb = (ChatEdit_GetLastActiveWindow and ChatEdit_GetLastActiveWindow())
+          or (DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox)
+  local ct = eb and eb:GetAttribute("chatType") or "SAY"
+  local target = eb and eb:GetAttribute("channelTarget")
+  local dup = false
+  for _, d in ipairs(out) do
+    if d.chatType == ct and (ct ~= "CHANNEL" or tostring(d.channel) == tostring(target)) then dup = true end
+  end
+  if not dup then
+    local name = ct
+    if ct == "CHANNEL" and target and GetChannelName then name = select(2, GetChannelName(target)) or ct
+    elseif ct == "WHISPER" then name = (_G.WHISPER or "Whisper") .. " " .. tostring(eb and eb:GetAttribute("tellTarget") or "")
+    else name = _G[ct] or _G["CHAT_MSG_" .. ct] or ct end
+    out[#out + 1] = { label = L["Current chat (%s)"]:format(name), chatType = ct, channel = target, current = true,
+                      tell = eb and eb:GetAttribute("tellTarget") }
+  end
+  return out
+end
+
+function C.SendLinkTo(d, link)
+  if not (d and link) then return end
+  if ChatFrame_OpenChat then ChatFrame_OpenChat("") end
+  local eb = (ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow())
+          or (ChatEdit_ChooseBoxForSend and ChatEdit_ChooseBoxForSend())
+  if not eb then return end
+  eb:SetAttribute("chatType", d.chatType)
+  if d.chatType == "CHANNEL" then eb:SetAttribute("channelTarget", d.channel) end
+  if d.chatType == "WHISPER" and d.tell then eb:SetAttribute("tellTarget", d.tell) end
+  if ChatEdit_UpdateHeader then ChatEdit_UpdateHeader(eb) end
+  if not (ChatEdit_InsertLink and ChatEdit_InsertLink(link)) then eb:Insert(link) end
+end
+
+function C.ShowLinkMenu(link, anchor)
+  if not link then return end
+  local menu = C._linkMenu
+  if not menu then
+    menu = CreateFrame("Frame", "NE_ProfessionsLinkMenu", UIParent, "UIDropDownMenuTemplate")
+    C._linkMenu = menu
+  end
+  local items = { { text = L["Link to"], isTitle = true, notCheckable = true } }
+  for _, d in ipairs(C.LinkDestinations()) do
+    items[#items + 1] = { text = d.label, notCheckable = true, func = function() C.SendLinkTo(d, link) end }
+  end
+  items[#items + 1] = { text = _G.CANCEL or "Cancel", notCheckable = true, func = function() end }
+  if EasyMenu then EasyMenu(items, menu, anchor or "cursor", 0, 0, "MENU") end
+  return items
+end
+
+-- Width the output name may use: right of the icon, short of the favourite star and (maximised) of
+-- the details panel; minimised, short of the card's right edge.
+function C.OutputNameWidth()
+  if isCompact() then return compactSchematicSize() - 89 - 30 end
+  return SCHEMATIC_W - DETAILS_W - 16 - 89 - 30
 end

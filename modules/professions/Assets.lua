@@ -183,3 +183,52 @@ NE.tex.RegisterAtlases({
 NE.tex.RegisterAtlases({
   ["professions-minimizedview-background"] = { file=5094125, left=0.001953, right=0.787109, top=0.000977, bottom=0.576172, width=402, height=589 },
 })
+
+-- ============================================================================
+-- Professions Book (Book.lua) — ForeverUI's book art, Textures/Professions/Book/.
+-- `file` is the shipped path itself (no FDID). Coords from ForeverUI's UIAtlas_06/07. The primary
+-- card sheets were cropped 1024x1024 -> 1024x256, so their top/bottom are x4 the source's.
+-- Fill/flare strips are prefixed nebook- : the plain skillbar_fill_flipbook_* names already belong
+-- to the crafting window's retail sprite sheets above.
+-- ============================================================================
+do
+  local B = P .. "Book\\"
+  local atl = {
+    ["profession-background-overview"]  = { file = B .. "professionoverviewbackgroundc60.blp", left = 0.000977, right = 0.650391, top = 0.000977, bottom = 0.557617, width = 665, height = 570 },
+    ["profession-overview-card"]        = { file = B .. "professioncardbackgroundgenericc60.blp", left = 0.000977, right = 0.649414, top = 0.001953, bottom = 0.279297, width = 664, height = 142 },
+    ["profession-overview-card-generic-cooking"]  = { file = B .. "professioncardbackgroundgenericc60.blp", left = 0.000977, right = 0.220703, top = 0.283203, bottom = 0.820312, width = 225, height = 275 },
+    ["profession-overview-card-generic-firstaid"] = { file = B .. "professioncardbackgroundgenericc60.blp", left = 0.222656, right = 0.442383, top = 0.283203, bottom = 0.820312, width = 225, height = 275 },
+    ["profession-overview-card-generic-fishing"]  = { file = B .. "professioncardbackgroundgenericc60.blp", left = 0.444336, right = 0.664062, top = 0.283203, bottom = 0.820312, width = 225, height = 275 },
+    ["profession-progressbar-bg"]       = { file = B .. "professionsbookc60.blp", left = 0.232422, right = 0.962891, top = 0.203125, bottom = 0.382812, width = 374, height = 23 },
+    ["profession-progressbar-frame"]    = { file = B .. "professionsbookc60.blp", left = 0.232422, right = 0.962891, top = 0.007812, bottom = 0.1875,   width = 374, height = 23 },
+    ["profession-square-frame"]         = { file = B .. "professionsbookc60.blp", left = 0.134766, right = 0.228516, top = 0.007812, bottom = 0.382812, width = 48,  height = 48 },
+    ["profession-button-red-crossmark"] = { file = B .. "professionsbookc60.blp", left = 0.087891, right = 0.130859, top = 0.570312, bottom = 0.742188, width = 22,  height = 22 },
+    ["profession-button-red-crossmark-pressed"] = { file = B .. "professionsbookc60.blp", left = 0.087891, right = 0.130859, top = 0.007812, bottom = 0.179688, width = 22, height = 22 },
+    ["nebook-fill-defaultblue"]         = { file = B .. "skillbar_fill_flipbook_defaultblue.blp", left = 0, right = 0.859375, top = 0, bottom = 0.515625, width = 880, height = 33 },
+  }
+  -- jewelcrafting / inscription: authored here (ForeverUI ships none) — see Textures/ASSETS.md.
+  for _, k in ipairs({ "alchemy", "blacksmithing", "enchanting", "engineering", "herbalism",
+                       "leatherworking", "mining", "skinning", "tailoring", "jewelcrafting", "inscription" }) do
+    atl["profession-overview-card-" .. k] = { file = B .. "professioncardbackground" .. k .. "c60.blp",
+      left = 0.000977, right = 0.649414, top = 0.003906, bottom = 0.558594, width = 664, height = 142 }
+  end
+  for _, s in ipairs({ "alchemy_c60", "blacksmithing", "cooking", "enchanting_c60", "engineering", "firstaid_c60",
+                       "fishing", "herbalism", "inscription", "jewelcrafting", "leatherworking", "mining",
+                       "skinning_c60", "tailoring" }) do
+    atl["nebook-fill-" .. s]  = { file = B .. "skillbar_fill_flipbook_" .. s .. ".blp", left = 0, right = 0.835938, top = 0, bottom = 0.53125,  width = 856, height = 34 }
+    atl["nebook-flare-" .. s] = { file = B .. "skillbar_flare_" .. s .. ".blp",         left = 0, right = 0.828125, top = 0, bottom = 0.515625, width = 53,  height = 33 }
+  end
+  -- Minimised crafting window card (ForeverUI TradeSkill.lua F.map, 360x484). Cut from the source
+  -- sheets' second rect into 512x512 files at (1,1), the same layout as the cooking/first-aid sheets.
+  for _, k in ipairs({ "alchemy", "blacksmithing", "enchanting", "engineering", "leatherworking",
+                       "mining", "tailoring", "cooking", "firstaid", "jewelcrafting", "inscription" }) do
+    atl["profession-background-card-" .. k] = { file = B .. "craftcard" .. k .. ".blp",
+      left = 0.001953, right = 0.705078, top = 0.001953, bottom = 0.947266, width = 360, height = 484 }
+  end
+  -- Side tabs (LargeSideTabButtonTemplate), 128x128 sheet.
+  local T = B .. "tabs\\commonsidetabc60.blp"
+  atl["common-sidetab"]          = { file = T, left = 0.007812, right = 0.4375,   top = 0.007812, bottom = 0.476562, width = 55, height = 60 }
+  atl["common-sidetab-hover"]    = { file = T, left = 0.007812, right = 0.4375,   top = 0.492188, bottom = 0.960938, width = 55, height = 60 }
+  atl["common-sidetab-selected"] = { file = T, left = 0.453125, right = 0.882812, top = 0.007812, bottom = 0.476562, width = 55, height = 60 }
+  NE.tex.RegisterAtlases(atl)
+end

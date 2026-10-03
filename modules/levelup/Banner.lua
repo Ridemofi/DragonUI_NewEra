@@ -277,6 +277,11 @@ local function onUpdate(f, elapsed)
     f.levelFrame:SetAlpha(clamp01(a))
     if since >= LEVEL_FADE_IN + LEVEL_HOLD + LEVEL_FADE_OUT then
       f.levelFrame:SetAlpha(0)
+      -- The list of unlocks is optional: with it off the banner ends with the level.
+      if M.IsListEnabled and not M.IsListEnabled() then
+        M.Hide()
+        return
+      end
       -- Long lists never parade; the grid panel shows all of them at once instead. The banner goes
       -- straight away rather than fading, because both sit at the same screen position and a
       -- crossfade would put the gold lines through the panel's header for a second.

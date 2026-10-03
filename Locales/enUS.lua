@@ -26,7 +26,18 @@ L["Jewelcrafting"]   = true
 L["Prospecting"]     = true
 L["Cooking"]         = true
 L["First Aid"]       = true
+-- Professions Book secondary-column blurbs, read as L[MISSING[key]] (dynamic subscript).
+L["Visit a trainer to learn cooking. Cooking lets you learn recipes to create food that heals you out of combat and grants you temporary buffs."] = true
+L["Visit a trainer to learn fishing. Fishing lets you catch fish and other strange things from water. Fish can be cooked into delicious meals with the Cooking skill."] = true
+L["Visit a trainer to learn first aid. First aid lets you turn cloth into bandages for healing yourself and others."] = true
 L["Fishing"]         = true
+-- Rank titles (the old parchment Professions Book read these; kept for the translations).
+L["Apprentice"]   = true
+L["Journeyman"]   = true
+L["Expert"]       = true
+L["Artisan"]      = true
+L["Master"]       = true
+L["Grand Master"] = true
 L["Select a recipe to craft"] = true
 L["Hide item tooltips in list"]       = true
 L["Colour names by skill difficulty"] = true
@@ -285,6 +296,8 @@ L["New Talent Points"] = true
 L["New rank available"] = true
 L["On by default. Turn off to stop the banner appearing on level-up; the harvest keeps running either way, so turning it back on costs nothing."] = true
 L["Play the level-up sound"] = true
+L["Show new spells and unlocks"] = true
+L["On by default. Lists what the new level brings (spells, talents, dungeons, battlegrounds) under the banner, or in the side panel when there are many. Turn off to see only the level banner."] = true
 L["Raid available"] = true
 L["Retail's level-up banner. What it announces is read from |cffffcc55this server|r — abilities and their levels come from your class trainer's own list, battlegrounds and dungeons from the client's brackets. Visit a trainer once to fill it in; |cffffcc55/nelevelup coverage|r shows what it knows."] = true
 L["Talents"] = true
@@ -541,3 +554,30 @@ L["Talent options"] = true
 -- ============================================================================
 
 L["blocked from calling %s — please report that function name."] = true
+
+-- ============================================================================
+-- PROFESSIONS
+-- ============================================================================
+
+L["Learn a primary profession from a trainer."] = true
+L["Learn a second primary profession from a trainer."] = true
+L["Toggle Professions Book"] = true
+L["Visit a trainer in a major city to learn a profession."] = true
+L["Visit a trainer to learn Cooking."] = true
+L["Visit a trainer to learn First Aid."] = true
+L["Visit a trainer to learn Fishing."] = true
+
+-- ============================================================================
+-- PROFESSIONS
+-- ============================================================================
+
+L["First Profession"] = true
+L["Second Profession"] = true
+L["Visit a profession trainer in a major city to learn a new profession. You may have two professions. You may have any combination of gathering and production professions."] = true
+
+-- ============================================================================
+-- PROFESSIONS
+-- ============================================================================
+
+L["Current chat (%s)"] = true
+L["Link to"] = true

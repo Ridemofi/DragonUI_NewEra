@@ -27,7 +27,7 @@ end
 if NE.modules and NE.modules.Register then
   NE.modules.Register{
     name     = MODULE,
-    default  = true,
+    default  = false, -- default OFF since DragonUI ships its own (enabled by default there, NeticSoul 2026-10); opt in from the options
     label    = L["Merchant window"],
     category = "Windows",
     -- Same string the options row renders (integration/Options.lua): one key, one translation.

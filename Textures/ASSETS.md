@@ -269,8 +269,25 @@ If this art is ever re-cut, re-measure both: `qa/offline/test_detailsskin.lua` a
 geometry (title flush with the row's class icon, title and icons on the bar's centre line, matching
 side margins) but it cannot know that the pixels moved.
 
-**Still outstanding:** `Textures/Professions/383588-professions-book-left.blp` (512×456) and
-`383589-professions-book-right.blp` (32×410) break both rules as well, and predate this note.
+`Textures/Professions/Book/` is the Professions Book (`modules/professions/Book.lua`): ForeverUI's
+book art from mod-forever-ui `data/art/interface/foreverui/` (uncompressed BGRA, POT, palette block).
+The nine primary-card sheets (`professioncardbackground<prof>c60.blp`) were 1024×1024 with the
+664×142 card strip at the top; they ship cropped to 1024×256 (rows 0–255, no resample) and their atlas
+top/bottom in `modules/professions/Assets.lua` are ×4 the source's. The overview backdrop, the generic
+card sheet (1024×512, holds the three secondary columns) and the 1024×64 fill / 64×64 flare strips ship
+unchanged. The old Cata parchment-book files (383588/383589 pages, professionsbook-sheet,
+professions-progress-fill) were removed with the parchment book.
+`craftcard<prof>.blp` are the minimised crafting window's 360×484 cards (ForeverUI
+`profession-background-card-*`): cut from the second rect (x 1–361, y 145–629) of the 1024×1024 card
+sheets into 512×512 canvases at (1,1), no resample — the same layout the cooking / first-aid sheets
+already had (those two are copied unchanged). `tabs/` holds the side-tab sheet `commonsidetabc60` and
+the 128×128 tab icons, unchanged.
+Jewelcrafting and Inscription have no ForeverUI card, so their `professioncardbackground*c60.blp`
+(1024×256, primary-card strip) and `craftcard*.blp` (512×512, crafting card) were authored here in the
+same style: the generic card strip / the alchemy crafting card with its emblem patch replaced by plain
+ground, plus the profession's emblem cut from our shipped retail recipe backgrounds (4723112 / 4723119),
+extracted by luminance, lifted, tinted (cool for jewelcrafting, warm for inscription), feathered and
+clipped to the card's own alpha.
 
 Same two FileDataIDs as §8's sheets, different crops: §8 ships the whole 512×256
 `damagemeters-background` sheet (the Bars-view plate) and the Cooldown Manager's 6704514 sheet with

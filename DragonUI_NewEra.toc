@@ -6,6 +6,7 @@
 ## Dependencies: DragonUI, !!!ClassicAPI
 ## OptionalDeps: DragonUI_Options
 ## SavedVariables: DragonUI_NewEraDB
+## SavedVariablesPerCharacter: NE_ProfessionsCacheDB
 
 bootstrap.lua
 
@@ -60,6 +61,9 @@ core\Menu.lua
 # Needs NE.tex + NE.nineslice, both above.
 core\NavBar.lua
 core\ButtonSkin.lua
+# MicroButtons = NE.micro, the one owner of our extra buttons on DragonUI's micro bar (Professions,
+# Adventure Guide). Needs NE.tex (above).
+core\MicroButtons.lua
 # Squelch = keep a Blizzard region hidden for good (a Show-swap for textures, an OnShow
 # re-hide for frames). Every reskin here has needed it: the cases that forced it into core are
 # the ones where the client re-Shows its own chrome from a path we do not own, and there is no
@@ -162,8 +166,12 @@ modules\merchant\Register.lua
 # RecipeList (left panel, FauxScrollFrame) -> Crafting (schematic form, rank bar, controls).
 modules\professions\Assets.lua
 modules\professions\Window.lua
+# Cache = per-character known-recipe cache (NE_ProfessionsCacheDB) the list renders from on open.
+modules\professions\Cache.lua
 modules\professions\RecipeList.lua
 modules\professions\Crafting.lua
+# Book = retail's ProfessionsBook overview + its micro button; opens professions into the window above.
+modules\professions\Book.lua
 
 # --- Auction House (visual shell + optional Auctionator embedded tabs) ---
 modules\auctionhouse\Assets.lua

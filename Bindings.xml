@@ -22,4 +22,10 @@
       DragonUI_NewEra.ej.Toggle()
     end
   </Binding>
+  <!-- The Professions Book parents secure spell buttons, so it is protected: Toggle refuses in combat. -->
+  <Binding name="NEWERA_TOGGLEPROFESSIONS" category="BINDING_HEADER_DRAGONUI_NEWERA">
+    if DragonUI_NewEra and DragonUI_NewEra.professionsbook and DragonUI_NewEra.professionsbook.Toggle then
+      DragonUI_NewEra.professionsbook.Toggle()
+    end
+  </Binding>
 </Bindings>

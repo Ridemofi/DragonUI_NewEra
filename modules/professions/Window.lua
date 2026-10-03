@@ -1,9 +1,9 @@
 -- DragonUI_NewEra/modules/professions/Window.lua — standalone crafting window HOST.
 --
 -- DOWNPORT: adapted from NewEra_ReferenceFolder/NewEra/Professions/Crafting.lua (the chrome
--- shell section). Creates NE_ProfessionsCraftingFrame (942×658), wires the TRADE_SKILL_SHOW /
--- CRAFT_SHOW event interception, and exposes C.Show / C.Hide / C.Refresh for the renderer
--- (RecipeList.lua + Crafting.lua).
+-- shell section). Creates NE_ProfessionsCraftingFrame (942×658 maximised / 673×594 minimised),
+-- wires the TRADE_SKILL_SHOW / CRAFT_SHOW event interception, and exposes C.Show / C.Hide /
+-- C.Refresh for the renderer (RecipeList.lua + Crafting.lua).
 --
 -- EVENT INTERCEPT STRATEGY (3.3.5a):
 --   TradeSkillFrame / CraftFrame are UIPanel frames registered with UISpecialFrames.
@@ -37,6 +37,92 @@ local RECIPELIST_W             = 274
 local RECIPELIST_TL            = { 5,  -72 }   -- below the rank bar; matches spellbook's content top
 local RECIPELIST_BL            = { 0,   5  }
 local SCHEMATIC_W, SCHEMATIC_H = 655, 553
+
+-- Maximise / minimise (the red expand/condense button left of the close X, as on DragonUI's world
+-- map). MAXIMISED = the wide geometry above. MINIMISED = ForeverUI's TradeSkill.lua page
+-- (N.window 673x594, N.list 304 wide at 5,-72, N.rank at 110,-40) — the schematic takes the rest of
+-- the width (356) beside the list. Saved account-wide in DragonUI_NewEraDB.professions.compact.
+local LAYOUTS = {
+  max = { w = FRAME_W, h = FRAME_H, list = RECIPELIST_W, rank = RANKBAR_TL },
+  min = { w = 673,     h = 594,     list = 304,          rank = { 110, -40 } },
+}
+C.LAYOUTS = LAYOUTS
+
+-- ONE POSITION for the Professions Book and this window, so switching between them (tabs, a
+-- profession spell, the overview tab) reads as one window. Both persist under windowPos.professions
+-- and register with the panel manager under that same posKey, both default to the same TOPLEFT
+-- home, and the book takes this window's scale. A drag on either rewrites the shared spot as
+-- TOPLEFT-of-frame from UIParent's BOTTOMLEFT (frame units — valid for both, same scale); a resize
+-- (max/min) keeps the top-left corner where it is.
+C.SHARED_POS_KEY = "professions"
+C.SHARED_DEFAULT = { point = "TOPLEFT", relPoint = "TOPLEFT", x = 16, y = -116 }
+
+local function sharedSlot()
+  local db = NE.db
+  return db and db.windowPos and db.windowPos[C.SHARED_POS_KEY]
+end
+
+-- Rewrite the saved spot as the frame's own TOPLEFT (also migrates an older TOP-anchored save).
+function C.SaveSharedPosition(frame)
+  local t = sharedSlot()
+  local l, top = frame:GetLeft(), frame:GetTop()
+  if not (t and l and top) then return end
+  t.point, t.relPoint, t.x, t.y = "TOPLEFT", "BOTTOMLEFT", l, top
+end
+
+-- Called from both windows' OnShow (after their scale is set): apply the shared spot if there is one.
+function C.PlaceShared(frame)
+  if not frame then return end
+  if frame ~= C.frame and C.frame and frame.SetScale then frame:SetScale(C.frame:GetScale() or 1) end
+  local t = sharedSlot()
+  if not (t and t.point) then return end
+  if NE.FrameUtil and NE.FrameUtil.RestoreWindowPosition then
+    NE.FrameUtil.RestoreWindowPosition(frame, C.SHARED_POS_KEY)
+  end
+  if t.point ~= "TOPLEFT" or t.relPoint ~= "BOTTOMLEFT" then C.SaveSharedPosition(frame) end
+end
+
+function C.WireSharedPosition(frame)
+  frame:HookScript("OnShow", function(self) C.PlaceShared(self) end)
+  frame:HookScript("OnDragStop", function(self) C.SaveSharedPosition(self) end)
+end
+
+-- Profession line name of the open crafting window ("?" when unknown or linked) — the cache's key.
+function C.CurrentProfKey()
+  local v
+  if C.mode == "craft" then
+    if GetCraftDisplaySkillLine then local ok, x = pcall(GetCraftDisplaySkillLine); if ok then v = x end end
+  elseif GetTradeSkillLine then
+    local ok, x = pcall(GetTradeSkillLine); if ok then v = x end
+  end
+  if not v or v == "" or v == "UNKNOWN" then v = C._pendingProfessionName end
+  -- Someone else's linked list must never be cached as ours: "?" makes every Cache call a no-op.
+  if C.mode ~= "craft" and IsTradeSkillLinked and IsTradeSkillLinked() then return "?" end
+  return (v and v ~= "" and v ~= "UNKNOWN") and v or "?"
+end
+
+-- Fit a FontString's text inside `maxW` (its anchored width when nil): step the font down one point
+-- at a time from `base` to `minSize`; if it still doesn't fit, wrap at `minSize` (two lines in the
+-- boxes this is used on). Returns the size used.
+function C.FitText(fs, text, maxW, base, minSize)
+  if not fs then return end
+  fs:SetText(text or "")
+  local path, _, flags = fs:GetFont()
+  maxW = maxW or fs:GetWidth()
+  if not path or not maxW or maxW <= 0 then return end
+  for size = base, minSize, -1 do
+    fs:SetFont(path, size, flags)
+    if (fs:GetStringWidth() or 0) <= maxW then
+      fs._neFitWrapped = nil
+      return size
+    end
+  end
+  fs:SetWidth(maxW)
+  if fs.SetWordWrap then fs:SetWordWrap(true) end
+  if fs.SetNonSpaceWrap then fs:SetNonSpaceWrap(true) end
+  fs._neFitWrapped = true
+  return minSize
+end
 
 C.FRAME_W        = FRAME_W
 C.FRAME_H        = FRAME_H
@@ -204,7 +290,8 @@ local function buildChrome(f)
   local ns = CreateFrame("Frame", nil, f)
   ns:SetAllPoints(f); ns:EnableMouse(false)
   if NE.nineslice and NE.nineslice.ApplyLayout then
-    guard("nineslice", function() NE.nineslice.ApplyLayout(ns, "PortraitFrameTemplate") end)
+    -- The Minimizable variant: its "double" top-right corner seats the max/min button by the X.
+    guard("nineslice", function() NE.nineslice.ApplyLayout(ns, "PortraitFrameTemplateMinimizable") end)
   end
   f.NineSlice = ns
 
@@ -269,6 +356,20 @@ local function buildChrome(f)
     end
   end)
   f.CloseButton = close
+
+  -- Maximise / minimise, immediately left of the X (core/MaxMin.lua: the RedButton expand/condense
+  -- glyphs the X is cut from). The glyph reads the live layout, never a cached copy.
+  guard("maxMin", function()
+    if not (NE.maxmin and NE.maxmin.Build) then return end
+    f.MaxMinButton = NE.maxmin.Build(f, {
+      name       = "NE_ProfessionsCraftingMaxMinButton",
+      anchorTo   = close,
+      frameLevel = close:GetFrameLevel(),
+      stateFunc  = function() return not C.opts.compact end,
+      onMaximize = function() C.SetCompact(false) end,
+      onMinimize = function() C.SetCompact(true) end,
+    })
+  end)
 end
 
 -- ============================================================================
@@ -277,7 +378,7 @@ end
 --   colorByDifficulty — colour recipe names by skill difficulty (orange/yellow/green/grey)
 -- Options live on C.opts and persist in DragonUI_NewEraDB.professions.
 -- ============================================================================
-C.opts = C.opts or { hideListTooltips = false, colorByDifficulty = false, genericBar = false }
+C.opts = C.opts or { hideListTooltips = false, colorByDifficulty = false, genericBar = false, compact = false }
 
 local function loadOpts()
   local root = _G.DragonUI_NewEraDB
@@ -286,6 +387,7 @@ local function loadOpts()
     if o.hideListTooltips  ~= nil then C.opts.hideListTooltips  = o.hideListTooltips  and true or false end
     if o.colorByDifficulty ~= nil then C.opts.colorByDifficulty = o.colorByDifficulty and true or false end
     if o.genericBar        ~= nil then C.opts.genericBar        = o.genericBar        and true or false end
+    if o.compact           ~= nil then C.opts.compact           = o.compact           and true or false end
   end
 end
 
@@ -295,7 +397,52 @@ local function saveOpts()
   o.hideListTooltips  = C.opts.hideListTooltips
   o.colorByDifficulty = C.opts.colorByDifficulty
   o.genericBar        = C.opts.genericBar
+  o.compact           = C.opts.compact
   _G.DragonUI_NewEraDB.professions = o
+end
+
+C._loadOpts, C._saveOpts = loadOpts, saveOpts
+
+-- Re-lay the window for the current C.opts.compact. Every pane hangs off the frame / recipe list /
+-- rank bar anchors, so only the sizes and the two TOPLEFT offsets move; Crafting.lua re-flows the
+-- schematic's insides (reagent column, details panel, parchment crop) and the list re-counts its
+-- visible rows for the new height. Safe before the sub-panels exist (they read it on first show).
+function C.ApplyLayout()
+  local f = C.frame
+  if not f then return end
+  local lay = C.opts.compact and LAYOUTS.min or LAYOUTS.max
+  f:SetSize(lay.w, lay.h)
+  if f.RecipeList then f.RecipeList:SetWidth(lay.list) end
+  if f.RankBar then
+    f.RankBar:ClearAllPoints()
+    f.RankBar:SetPoint("TOPLEFT", f, "TOPLEFT", lay.rank[1], lay.rank[2])
+  end
+  -- Body: tiled rock when maximised; minimised, ForeverUI's OverrideArt (the profession overview
+  -- backdrop, no streaks) so the card sits on the same ground as in TradeSkill.lua.
+  if f.bodyBg then
+    local body = f.bodyBg
+    if C.opts.compact and NE.tex.SetAtlas(body, "profession-background-overview", false) then
+      body:SetHorizTile(false); body:SetVertTile(false)
+      body:SetPoint("TOPLEFT", f, "TOPLEFT", 2, -21)
+      body:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -2, 2)
+    else
+      body:SetTexture((NE.tex.localFiles and NE.tex.localFiles[374155]) or 374155, "REPEAT", "REPEAT")
+      body:SetTexCoord(0, 1, 0, 1)
+      body:SetHorizTile(true); body:SetVertTile(true)
+      body:SetPoint("TOPLEFT", f, "TOPLEFT", 0, -21)
+      body:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0)
+    end
+  end
+  if f.topStreaks then if C.opts.compact then f.topStreaks:Hide() else f.topStreaks:Show() end end
+  if C.LayoutSchematic then guard("LayoutSchematic", C.LayoutSchematic) end
+  if f._subBuilt and f:IsShown() and C.RefreshRecipes then guard("RefreshRecipes.layout", C.RefreshRecipes) end
+end
+
+function C.SetCompact(on)
+  C.opts.compact = on and true or false
+  saveOpts()
+  C.ApplyLayout()
+  if C.frame and C.frame.MaxMinButton then C.frame.MaxMinButton:SetStateSilently(not C.opts.compact) end
 end
 
 local function prewarmSkillBarAtlases()
@@ -463,7 +610,7 @@ local function buildWindow()
   -- skinned as its panes are built (core/ButtonSkin.lua). Opt out per button with _neNoSkin.
   if NE.buttonskin and NE.buttonskin.Watch then pcall(NE.buttonskin.Watch, f) end
   f:SetSize(FRAME_W, FRAME_H)
-  f:SetPoint("TOP", UIParent, "TOP", 0, -55)
+  f:SetPoint(C.SHARED_DEFAULT.point, UIParent, C.SHARED_DEFAULT.relPoint, C.SHARED_DEFAULT.x, C.SHARED_DEFAULT.y)
   f:SetFrameStrata("HIGH")
   f:SetToplevel(true)
   f:Hide()
@@ -471,8 +618,7 @@ local function buildWindow()
 
   -- Drag-to-move with saved position.
   if NE.FrameUtil and NE.FrameUtil.PersistWindowPosition then
-    NE.FrameUtil.PersistWindowPosition(f, "professions",
-      { point = "TOP", relPoint = "TOP", x = 0, y = -55 })
+    NE.FrameUtil.PersistWindowPosition(f, C.SHARED_POS_KEY, C.SHARED_DEFAULT)
   else
     f:EnableMouse(true); f:SetMovable(true); f:SetClampedToScreen(true)
     f:RegisterForDrag("LeftButton")
@@ -552,9 +698,15 @@ local function buildWindow()
       guard("buildLinkButton",    function() if C.buildLinkButton     then C.buildLinkButton(f)    end end)
     end
 
+    -- Restore the saved max/min layout before the content fills it.
+    guard("ApplyLayout", C.ApplyLayout)
+
     -- Refresh content strictly AFTER all sub-panels (including RankBar) are fully constructed.
     if C.Refresh then guard("refresh.onshow", C.Refresh) end
   end)
+
+  -- Last OnShow hook, so the window scale is already applied when the shared spot is restored.
+  C.WireSharedPosition(f)
 
   return f
 end
@@ -608,6 +760,12 @@ local function resyncSelectedFromList()
   for _, e in ipairs(C.flatList) do
     local live = (e.kind == "recipe") and e.r or nil
     if live and live.name == r.name and (live.isCraft and true or false) == (r.isCraft and true or false) then
+      -- A recipe picked from the saved list before the live one arrived: select the live one now
+      -- (its index, craft buttons, item details).
+      if r.cached and not live.cached then
+        if C.OnRecipeSelected then C.OnRecipeSelected(live) end
+        return
+      end
       if live ~= r then
         r.index        = live.index
         r.difficulty   = live.difficulty
@@ -727,6 +885,7 @@ local function isModuleEnabled()
   if type(m) == "table" and m.enabled ~= nil then return m.enabled and true or false end
   return true
 end
+C.IsModuleEnabled = isModuleEnabled   -- the Professions Book's micro button shares this gate
 
 -- ============================================================================
 -- Event wiring. A plain EventFrame (not the window itself) owns the game events
@@ -748,6 +907,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
   if event == "PLAYER_LOGIN" then
     guard("loadOpts", loadOpts)
     guard("buildWindow", buildWindow)
+    guard("ApplyLayout", C.ApplyLayout)   -- saved max/min size before the panel row first reads it
     -- Prewarm both the plain-bar fill texture and the art-based profession flipbook sheets on a
     -- SHOWN frame so their first visible use doesn't resolve as a dark placeholder.
     guard("prewarmBar", function()

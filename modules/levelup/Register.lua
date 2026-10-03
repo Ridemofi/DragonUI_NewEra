@@ -43,6 +43,21 @@ function M.SetSoundEnabled(v)
   NE.db.levelup.sound = v and true or false
 end
 
+-- The list of what the new level brings (spells, talents, dungeons, battlegrounds): paraded under the
+-- banner, or the side grid when long. ON by default; off shows the level banner alone.
+function M.IsListEnabled()
+  if NE.db and NE.db.levelup and NE.db.levelup.list ~= nil then
+    return NE.db.levelup.list and true or false
+  end
+  return true
+end
+
+function M.SetListEnabled(v)
+  if not NE.db then return end
+  NE.db.levelup = NE.db.levelup or {}
+  NE.db.levelup.list = v and true or false
+end
+
 -- ── Live events ─────────────────────────────────────────────────────────────────────────────────
 --
 -- PLAYER_LEVEL_UP carries the NEW level as its first argument. Read it rather than calling
@@ -115,10 +130,31 @@ end
 
 -- ── DragonUI wiring ─────────────────────────────────────────────────────────────────────────────
 
+-- DragonUI ships a level-up banner of its own (levelupenhance, on by default there). While ours is on,
+-- DragonUI's is switched off -- through its own Restore, and again whenever DragonUI re-applies it --
+-- so a level-up shows one banner, ours. DragonUI's saved setting is never touched: turning ours off
+-- hands the banner back (DragonUI's Refresh re-applies it if it is enabled there).
+local function SyncDragonUILevelUp()
+  local D = _G.DragonUI
+  if not (D and D.RestoreLevelUpEnhanceSystem) then return end
+  if M.IsEnabled() then
+    D.RestoreLevelUpEnhanceSystem()
+  elseif D.RefreshLevelUpEnhanceSystem then
+    D.RefreshLevelUpEnhanceSystem()
+  end
+end
+M.SyncDragonUILevelUp = SyncDragonUILevelUp
+if _G.DragonUI and _G.DragonUI.ApplyLevelUpEnhanceSystem then
+  hooksecurefunc(_G.DragonUI, "ApplyLevelUpEnhanceSystem", function()
+    if M.IsEnabled() then _G.DragonUI.RestoreLevelUpEnhanceSystem() end
+  end)
+end
+
 local login = CreateFrame("Frame")
 login:RegisterEvent("PLAYER_LOGIN")
 login:SetScript("OnEvent", function(self)
   self:UnregisterAllEvents()
+  SyncDragonUILevelUp()
 
   -- Build up front so the mover has a real frame to size itself against, and so the first level-up
   -- of a session is not also the first time this code runs.
@@ -159,6 +195,7 @@ login:SetScript("OnEvent", function(self)
           setFunc = function(v)
             M.SetEnabled(v)
             if not v then M.Hide(); M.HideSide() end
+            SyncDragonUILevelUp()
           end,
         })
 
@@ -170,6 +207,18 @@ login:SetScript("OnEvent", function(self)
                     .. "of their own."],
           getFunc = function() return M.IsSoundEnabled() end,
           setFunc = function(v) M.SetSoundEnabled(v) end,
+        })
+
+        C:AddToggle(scroll, {
+          label   = L["Show new spells and unlocks"],
+          desc    = L["On by default. Lists what the new level brings (spells, talents, dungeons, "
+                    .. "battlegrounds) under the banner, or in the side panel when there are many. "
+                    .. "Turn off to see only the level banner."],
+          getFunc = function() return M.IsListEnabled() end,
+          setFunc = function(v)
+            M.SetListEnabled(v)
+            if not v then M.HideSide() end
+          end,
         })
       end,
     })

@@ -609,7 +609,7 @@ SB.Boot = boot
 
 if NE.modules and NE.modules.Register then
   NE.modules.Register(MODULE, {
-    default  = true,
+    default  = false, -- default OFF since DragonUI ships its own (enabled by default there, NeticSoul 2026-10); opt in from the options
     label    = SPELLBOOK or L["Spellbook"],
     category = "Windows",
     desc     = L["The modern Dragonflight spellbook window. Disable to keep the stock Blizzard spellbook."],

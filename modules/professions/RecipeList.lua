@@ -197,6 +197,19 @@ end
 -- ============================================================================
 function C.BuildFlatList()
   local cats = (C.mode == "craft") and readEraCraftTree() or readEraRecipeTree()
+  -- Saved recipe cache (Cache.lua): reconcile live data into it; render from it while the live list
+  -- is still empty (first moments of an open), so the window never opens blank.
+  if C.Cache then
+    local key = C.CurrentProfKey and C.CurrentProfKey() or profKey()
+    local any = false
+    for _, cat in ipairs(cats) do if #cat.recipes > 0 then any = true; break end end
+    if any then
+      C.Cache.StoreTree(key, cats)
+      C.Cache.ScanTree(key, cats)
+    else
+      cats = C.Cache.Tree(key)
+    end
+  end
   local flat  = {}
   local filt  = C.filters
   local srch  = (filt.search or ""):lower()
@@ -373,7 +386,8 @@ local function initRecipeRow(btn, entry, rl)
   btn:SetHeight(ROW_H_RECIPE)
   btn._recipe = r
 
-  btn.RLabel:SetText(r.name)
+  -- Too long for the row: smaller font a point at a time, then two lines (Window.lua C.FitText).
+  if C.FitText then C.FitText(btn.RLabel, r.name, nil, 12, 8) else btn.RLabel:SetText(r.name) end
   local cr, cg, cb = (r.learned and learnedRGB or unlearnedRGB)()
   -- Cog option: colour learned recipes by skill difficulty instead of the flat parchment-gold.
   if C.opts and C.opts.colorByDifficulty and r.learned then
