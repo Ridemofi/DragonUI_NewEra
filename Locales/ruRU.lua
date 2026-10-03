@@ -15,8 +15,11 @@ been through a human pass.
 
 local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI_NewEra", "ruRU")
 if not L then return end
+
 -- ============================================================================
+-- PROFESSIONS
 -- ============================================================================
+
 L["Alchemy"] = "Алхимия"
 L["Blacksmithing"] = "Кузнечное дело"
 L["Enchanting"] = "Наложение чар"
@@ -32,7 +35,18 @@ L["Jewelcrafting"] = "Ювелирное дело"
 L["Prospecting"] = "Просеивание"
 L["Cooking"] = "Кулинария"
 L["First Aid"] = "Первая помощь"
+-- Professions Book secondary-column blurbs, read as L[MISSING[key]] (dynamic subscript).
+L["Visit a trainer to learn cooking. Cooking lets you learn recipes to create food that heals you out of combat and grants you temporary buffs."] = "Посетите учителя, чтобы обучиться кулинарии. Кулинария позволяет готовить еду, восстанавливающую здоровье вне боя и дающую временные усиления."
+L["Visit a trainer to learn fishing. Fishing lets you catch fish and other strange things from water. Fish can be cooked into delicious meals with the Cooking skill."] = "Посетите учителя, чтобы обучиться рыбной ловле. Рыбная ловля позволяет ловить рыбу и другие диковинки из водоемов. Рыбу можно приготовить с помощью кулинарии."
+L["Visit a trainer to learn first aid. First aid lets you turn cloth into bandages for healing yourself and others."] = "Посетите учителя, чтобы обучиться первой помощи. Первая помощь позволяет делать бинты из ткани для исцеления себя и союзников."
 L["Fishing"] = "Рыбная ловля"
+-- Rank titles (the old parchment Professions Book read these; kept for the translations).
+L["Apprentice"] = "Ученик"
+L["Journeyman"] = "Подмастерье"
+L["Expert"] = "Умелец"
+L["Artisan"] = "Мастеровой"
+L["Master"] = "Мастер"
+L["Grand Master"] = "Великий мастер"
 L["Select a recipe to craft"] = "Выберите рецепт для создания"
 L["Hide item tooltips in list"] = "Скрывать подсказки в списке"
 L["Colour names by skill difficulty"] = "Окрашивать названия по сложности"
@@ -291,6 +305,8 @@ L["New Talent Points"] = "Новые очки талантов"
 L["New rank available"] = "Доступен новый ранг"
 L["On by default. Turn off to stop the banner appearing on level-up; the harvest keeps running either way, so turning it back on costs nothing."] = "По умолчанию включено. Выключите, чтобы баннер не появлялся при получении уровня; сбор данных продолжается в любом случае, поэтому обратное включение ничего не стоит."
 L["Play the level-up sound"] = "Проигрывать звук получения уровня"
+L["Show new spells and unlocks"] = "Показывать новые заклинания и возможности"
+L["On by default. Lists what the new level brings (spells, talents, dungeons, battlegrounds) under the banner, or in the side panel when there are many. Turn off to see only the level banner."] = "По умолчанию включено. Отображает список того, что даёт новый уровень (заклинания, таланты, подземелья, поля боя) под баннером или на боковой панели, если их много. Выключите, чтобы видеть только баннер уровня."
 L["Raid available"] = "Доступен рейд"
 L["Retail's level-up banner. What it announces is read from |cffffcc55this server|r — abilities and their levels come from your class trainer's own list, battlegrounds and dungeons from the client's brackets. Visit a trainer once to fill it in; |cffffcc55/nelevelup coverage|r shows what it knows."] = "Баннер получения уровня из retail. То, что он объявляет, считывается с |cffffcc55этого сервера|r — способности и их уровни берутся из списка вашего учителя класса, а поля боя и подземелья — из диапазонов клиента. Посетите учителя один раз, чтобы заполнить данные; |cffffcc55/nelevelup coverage|r показывает, что известно."
 L["Talents"] = "Таланты"
@@ -435,6 +451,9 @@ L["Timeline (rail)"] = "Шкала времени (направляющая)"
 L["Bars"] = "Полосы"
 L["Show the frame"] = "Показывать окно"
 L["Only while timers are running"] = "Только когда запущены таймеры"
+L["DBM raises a timer a little before a pull and for a few things outside combat — a "
+  .. "queue, a break, a raid leader's own timer — so this follows the timers rather "
+  .. "than your combat flag."] = "DBM запускает таймер незадолго до пула и для ряда событий вне боя (очередь, перерыв, собственный таймер лидера рейда), поэтому настройка ориентируется на таймеры, а не на состояние боя."
 L["Icon size"] = "Размер значков"
 L["Rail length"] = "Длина направляющей"
 L["Bar width"] = "Ширина полосы"
@@ -504,6 +523,16 @@ L["Switches every Details! window to the skin and sets K/M number abbreviation. 
 L["Inspect window"] = "Окно осмотра"
 L["Modern frame, portrait and tabs on the inspect window, with its Character tab laid out like the character window. Reload (/reload) to apply."] = "Современная рамка, портрет и вкладки в окне осмотра; вкладка «Персонаж» повторяет окно персонажа. Для применения выполните /reload."
 
+L["Merchant window"] = "Окно торговца"
+L["Modern frame, portrait and tabs on the vendor window, plus a sell-all-junk button and the buyback undo arrow. Reload (/reload) to apply."] = "Современная рамка, портрет и вкладки в окне торговца, а также кнопка продажи всего серого хлама и стрелка отмены выкупа. Для применения выполните /reload."
+
+-- ============================================================================
+-- MERCHANT
+-- ============================================================================
+
+L["Sell all junk items"] = "Продать весь серый хлам"
+L["Sell all of your junk (gray) items?"] = "Продать все ваши серые предметы (хлам)?"
+
 -- ============================================================================
 -- TALENTS
 -- ============================================================================
@@ -521,3 +550,43 @@ L["No team"] = "Нет команды"
 L["Rating"] = "Рейтинг"
 L["Unranked"] = "Без звания"
 L["View this player's talents."] = "Посмотреть таланты этого игрока."
+
+-- ============================================================================
+-- TALENTS
+-- ============================================================================
+
+L["Centre talent rows"] = "Центрировать ряды талантов"
+L["Talent options"] = "Настройки талантов"
+
+-- ============================================================================
+-- MISCELLANEOUS
+-- ============================================================================
+
+L["blocked from calling %s — please report that function name."] = "заблокирован вызов %s — пожалуйста, сообщите название этой функции."
+
+-- ============================================================================
+-- PROFESSIONS
+-- ============================================================================
+
+L["Learn a primary profession from a trainer."] = "Обучитесь основной профессии у учителя."
+L["Learn a second primary profession from a trainer."] = "Обучитесь второй основной профессии у учителя."
+L["Toggle Professions Book"] = "Открыть/закрыть книгу профессий"
+L["Visit a trainer in a major city to learn a profession."] = "Посетите учителя в крупном городе, чтобы обучиться профессии."
+L["Visit a trainer to learn Cooking."] = "Посетите учителя, чтобы обучиться кулинарии."
+L["Visit a trainer to learn First Aid."] = "Посетите учителя, чтобы обучиться первой помощи."
+L["Visit a trainer to learn Fishing."] = "Посетите учителя, чтобы обучиться рыбной ловле."
+
+-- ============================================================================
+-- PROFESSIONS
+-- ============================================================================
+
+L["First Profession"] = "Первая профессия"
+L["Second Profession"] = "Вторая профессия"
+L["Visit a profession trainer in a major city to learn a new profession. You may have two professions. You may have any combination of gathering and production professions."] = "Посетите учителя профессий в крупном городе, чтобы изучить новую профессию. Вы можете иметь две основные профессии в любой комбинации собирательных и производящих навыков."
+
+-- ============================================================================
+-- PROFESSIONS
+-- ============================================================================
+
+L["Current chat (%s)"] = "Текущий чат (%s)"
+L["Link to"] = "Отправить ссылку в"
