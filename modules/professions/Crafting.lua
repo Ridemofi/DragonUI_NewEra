@@ -2017,9 +2017,9 @@ function C.LayoutSchematic()
 end
 
 -- ============================================================================
--- Link destination picker (the crafting link button, shift-click in the Professions Book).
--- Only destinations that apply right now; picking one opens the chat box on that channel with the
--- link inserted, unsent.
+-- Link destination picker (the crafting link button; shift-click goes straight to the current chat).
+-- Current chat and Trade always (Trade greyed out until joined), Party/Raid/Guild when they apply;
+-- picking one opens the chat box on that channel with the link inserted, unsent.
 -- ============================================================================
 
 -- The joined Trade channel: id, name — or nil. GetChannelList() is id, name pairs on 3.3.5a.
@@ -2043,28 +2043,23 @@ end
 
 function C.LinkDestinations()
   local out = {}
-  local tid, tname = tradeChannel()
-  if tid then out[#out + 1] = { label = tname, chatType = "CHANNEL", channel = tid } end
-  if GetNumPartyMembers and GetNumPartyMembers() > 0 then out[#out + 1] = { label = _G.PARTY or "Party", chatType = "PARTY" } end
-  if GetNumRaidMembers and GetNumRaidMembers() > 0 then out[#out + 1] = { label = _G.RAID or "Raid", chatType = "RAID" } end
-  if IsInGuild and IsInGuild() then out[#out + 1] = { label = _G.GUILD or "Guild", chatType = "GUILD" } end
-  -- Whatever the chat box is set to now, unless that is one of the above already.
+  -- Current chat first, always: whatever the chat box is set to now (even when it is also listed below).
   local eb = (ChatEdit_GetLastActiveWindow and ChatEdit_GetLastActiveWindow())
           or (DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox)
   local ct = eb and eb:GetAttribute("chatType") or "SAY"
   local target = eb and eb:GetAttribute("channelTarget")
-  local dup = false
-  for _, d in ipairs(out) do
-    if d.chatType == ct and (ct ~= "CHANNEL" or tostring(d.channel) == tostring(target)) then dup = true end
-  end
-  if not dup then
-    local name = ct
-    if ct == "CHANNEL" and target and GetChannelName then name = select(2, GetChannelName(target)) or ct
-    elseif ct == "WHISPER" then name = (_G.WHISPER or "Whisper") .. " " .. tostring(eb and eb:GetAttribute("tellTarget") or "")
-    else name = _G[ct] or _G["CHAT_MSG_" .. ct] or ct end
-    out[#out + 1] = { label = L["Current chat (%s)"]:format(name), chatType = ct, channel = target, current = true,
-                      tell = eb and eb:GetAttribute("tellTarget") }
-  end
+  local name = ct
+  if ct == "CHANNEL" and target and GetChannelName then name = select(2, GetChannelName(target)) or ct
+  elseif ct == "WHISPER" then name = (_G.WHISPER or "Whisper") .. " " .. tostring(eb and eb:GetAttribute("tellTarget") or "")
+  else name = _G[ct] or _G["CHAT_MSG_" .. ct] or ct end
+  out[#out + 1] = { label = L["Current chat (%s)"]:format(name), chatType = ct, channel = target, current = true,
+                    tell = eb and eb:GetAttribute("tellTarget") }
+  -- Trade, always listed: greyed out while you are not in the Trade channel (only joinable in a city).
+  local tid, tname = tradeChannel()
+  out[#out + 1] = { label = tname or (_G.TRADE or "Trade"), chatType = "CHANNEL", channel = tid, disabled = not tid }
+  if GetNumPartyMembers and GetNumPartyMembers() > 0 then out[#out + 1] = { label = _G.PARTY or "Party", chatType = "PARTY" } end
+  if GetNumRaidMembers and GetNumRaidMembers() > 0 then out[#out + 1] = { label = _G.RAID or "Raid", chatType = "RAID" } end
+  if IsInGuild and IsInGuild() then out[#out + 1] = { label = _G.GUILD or "Guild", chatType = "GUILD" } end
   return out
 end
 
@@ -2089,7 +2084,7 @@ function C.LinkToChat(link)
 end
 
 function C.SendLinkTo(d, link)
-  if not (d and link) then return end
+  if not (d and link) or d.disabled then return end
   local eb = openChatWith(link)
   if not eb then return end
   eb:SetAttribute("chatType", d.chatType)
@@ -2107,7 +2102,8 @@ function C.ShowLinkMenu(link, anchor)
   end
   local items = { { text = L["Link to"], isTitle = true, notCheckable = true } }
   for _, d in ipairs(C.LinkDestinations()) do
-    items[#items + 1] = { text = d.label, notCheckable = true, func = function() C.SendLinkTo(d, link) end }
+    items[#items + 1] = { text = d.label, notCheckable = true, disabled = d.disabled,
+                          func = function() if not d.disabled then C.SendLinkTo(d, link) end end }
   end
   items[#items + 1] = { text = _G.CANCEL or "Cancel", notCheckable = true, func = function() end }
   if EasyMenu then EasyMenu(items, menu, anchor or "cursor", 0, 0, "MENU") end

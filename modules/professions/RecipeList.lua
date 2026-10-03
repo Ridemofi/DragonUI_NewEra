@@ -781,6 +781,9 @@ function C.buildRecipeList(f)
   content:SetPoint("TOPLEFT",     search, "BOTTOMLEFT",  0, -4)
   content:SetPoint("BOTTOMRIGHT", rl,     "BOTTOMRIGHT", -22, 8)
   rl.Content = content
+  -- Max/min resizes the frame, but anchored heights only resolve on the next layout pass, so the
+  -- refresh in ApplyLayout still counts the old rows; re-count once the real height lands.
+  content:SetScript("OnSizeChanged", function() if rl:IsVisible() and C.flatList then refreshRows(rl) end end)
 
   -- Visual cue that the list continues below the fold.
   local bottomFade = content:CreateTexture(nil, "OVERLAY")

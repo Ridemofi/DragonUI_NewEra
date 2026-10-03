@@ -388,17 +388,17 @@ local function labels()
   for _, d in ipairs(C.LinkDestinations()) do t[#t + 1] = d.chatType .. ":" .. tostring(d.label) end
   return table.concat(t, ",")
 end
-check("solo, no channels: only the current chat", labels() == "SAY:Current chat (Say)", labels())
+check("solo, no channels: current chat + Trade (greyed)", labels() == "SAY:Current chat (Say),CHANNEL:Trade" and C.LinkDestinations()[2].disabled, labels())
 channels = { 1, "General", 2, "Trade" }
-check("Trade offered once joined", labels() == "CHANNEL:Trade,SAY:Current chat (Say)", labels())
+check("Trade usable once joined", labels() == "SAY:Current chat (Say),CHANNEL:Trade" and not C.LinkDestinations()[2].disabled, labels())
 party, guild = 4, true
-check("party + guild", labels() == "CHANNEL:Trade,PARTY:Party,GUILD:Guild,SAY:Current chat (Say)", labels())
+check("party + guild", labels() == "SAY:Current chat (Say),CHANNEL:Trade,PARTY:Party,GUILD:Guild", labels())
 raid = 10
 check("raid too when in one", labels():find("RAID:Raid", 1, true) ~= nil, labels())
 chatBox._attrs.chatType = "GUILD"
-check("current chat not repeated when it is already listed", select(2, labels():gsub("GUILD", "")) == 1, labels())
+check("current chat always listed first, even when it is also Guild", labels():find("^GUILD:Current chat") ~= nil, labels())
 chatBox._attrs.chatType = "SAY"
-local trade = C.LinkDestinations()[1]
+local trade = C.LinkDestinations()[2]
 C.SendLinkTo(trade, "|Htrade:1|h[x]|h")
 check("pick opens the chat box", opened == 1 and header == 1)
 check("pick sets the channel", chatBox._attrs.chatType == "CHANNEL" and chatBox._attrs.channelTarget == 2)
@@ -412,8 +412,11 @@ local shown
 function EasyMenu(items) shown = items end
 C.ShowLinkMenu("|Htrade:1|h[x]|h")
 check("menu = title + destinations + cancel", shown and #shown == #C.LinkDestinations() + 2 and shown[1].isTitle)
-shown[3].func()
+shown[4].func()   -- title, current chat, Trade, Party, ...
 check("menu entry routes to that destination", chatBox._attrs.chatType == "PARTY")
+channels = {}; shown = nil; C.ShowLinkMenu("|Htrade:1|h[x]|h")
+local before = opened; shown[3].func()
+check("greyed-out Trade is disabled and does nothing", shown[3].disabled and opened == before)
 
 -- ── one shared position for the book and the crafting window ────────────────────────────────────
 NE.db = { windowPos = { professions = { point = "TOP", relPoint = "TOP", x = 0, y = -55 } } }   -- an old save
