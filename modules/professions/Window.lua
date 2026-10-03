@@ -83,18 +83,26 @@ function C.PlaceShared(frame)
   if t.point ~= "TOPLEFT" or t.relPoint ~= "BOTTOMLEFT" then C.SaveSharedPosition(frame) end
 end
 
--- Open/close sounds as the stock TradeSkillFrame plays them, once for the unified window: a close is
--- held one frame, and a show in that frame (book <-> crafting switch, either order) swallows both.
+-- Open/close sounds as the stock TradeSkillFrame plays them, once for the unified window. A switch
+-- is silent in either order: a show while the other page is up is not an open, a hide while it is up
+-- is not a close (crafting shows first on a tab cast), and a close is held one frame so a show right
+-- after it (overview tab: crafting hides, then the book shows) cancels it.
 local soundTimer = CreateFrame("Frame")
 soundTimer:Hide()
 soundTimer:SetScript("OnUpdate", function(self) self:Hide(); PlaySound("igCharacterInfoClose") end)
+local pages = {}
+local function otherShown(frame)
+  for _, p in ipairs(pages) do if p ~= frame and p:IsShown() then return true end end
+end
 
 function C.WireSharedPosition(frame)
+  pages[#pages + 1] = frame
   frame:HookScript("OnShow", function(self)
     C.PlaceShared(self)
-    if soundTimer:IsShown() then soundTimer:Hide() else PlaySound("igCharacterInfoOpen") end
+    if soundTimer:IsShown() then soundTimer:Hide()
+    elseif not otherShown(self) then PlaySound("igCharacterInfoOpen") end
   end)
-  frame:HookScript("OnHide", function() soundTimer:Show() end)
+  frame:HookScript("OnHide", function(self) if not otherShown(self) then soundTimer:Show() end end)
   frame:HookScript("OnDragStop", function(self) C.SaveSharedPosition(self) end)
 end
 
