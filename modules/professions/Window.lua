@@ -40,11 +40,12 @@ local SCHEMATIC_W, SCHEMATIC_H = 655, 553
 
 -- Maximise / minimise (the red expand/condense button left of the close X, as on DragonUI's world
 -- map). MAXIMISED = the wide geometry above. MINIMISED = ForeverUI's TradeSkill.lua page
--- (N.window 673x594, N.list 304 wide at 5,-72, N.rank at 110,-40) — the schematic takes the rest of
--- the width (356) beside the list. Saved account-wide in DragonUI_NewEraDB.professions.compact.
+-- (N.window 673x594, N.rank at 110,-40). The recipe list keeps ONE width in both sizes (the wide
+-- view's 274, not ForeverUI's 304) so it does not jump when toggling; the schematic takes the rest of
+-- the width (386) beside it. Saved account-wide in DragonUI_NewEraDB.professions.compact.
 local LAYOUTS = {
   max = { w = FRAME_W, h = FRAME_H, list = RECIPELIST_W, rank = RANKBAR_TL },
-  min = { w = 673,     h = 594,     list = 304,          rank = { 110, -40 } },
+  min = { w = 673,     h = 594,     list = RECIPELIST_W, rank = { 110, -40 } },
 }
 C.LAYOUTS = LAYOUTS
 

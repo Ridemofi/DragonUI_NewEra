@@ -316,9 +316,9 @@ check("max/min button exists", mm ~= nil)
 local mp = mm and mm._points[1]
 check("max/min sits immediately left of the close X", mp and mp[1] == "RIGHT" and mp[2] == cf.CloseButton and mp[3] == "LEFT")
 check("saved minimised state restored on open: 673x594", cf._w == 673 and cf._h == 594, tostring(cf._w) .. "x" .. tostring(cf._h))
-check("minimised list 304 wide", cf.RecipeList._w == 304, cf.RecipeList._w)
+check("minimised list is the same 274 wide as maximised", cf.RecipeList._w == 274, cf.RecipeList._w)
 check("minimised rank bar at ForeverUI 110,-40", select(1, rankX()) == 110 and select(2, rankX()) == -40)
-check("minimised reagent column fills the 356 schematic", cf.SchematicForm.ReagentContainer._w == 316, cf.SchematicForm.ReagentContainer._w)
+check("minimised reagent column fills the 386 schematic", cf.SchematicForm.ReagentContainer._w == 346, cf.SchematicForm.ReagentContainer._w)
 check("minimised Create All narrows", cf.CreateAllButton._w == 90, cf.CreateAllButton._w)
 check("glyph offers maximise while minimised", not mm:IsMaximized())
 
@@ -339,7 +339,7 @@ check("details panel hidden when minimised", not cf.SchematicForm.DetailsPanel:I
 
 check("minimised card stops at ForeverUI's 484", (function()
   local q = cf.SchematicForm._points[#cf.SchematicForm._points]
-  return q[1] == "BOTTOMRIGHT" and q[4] == 2 + 356 and q[5] == -484 end)())
+  return q[1] == "BOTTOMRIGHT" and q[4] == 2 + 386 and q[5] == -484 end)())
 cf.SchematicForm._cardKey = "alchemy"; C.ApplySchematicBackground()
 check("minimised schematic wears ForeverUI's alchemy card", cf.SchematicForm.Background._atlas == "profession-background-card-alchemy", cf.SchematicForm.Background._atlas)
 check("minimised body = ForeverUI overview backdrop", cf.bodyBg._atlas == "profession-background-overview")

@@ -87,8 +87,8 @@ local REAGENT_COL_W = SCHEMATIC_W - DETAILS_W - 70
 -- this wide/tall. No room for the details panel there, so the reagent column takes the full width
 -- and rows tighten so eight reagents still clear the Create row.
 local function compactSchematicSize()
-  local lay = C.LAYOUTS and C.LAYOUTS.min or { w = 673, h = 594, list = 304 }
-  return lay.w - 5 - lay.list - 2 - 6, 484     -- 356 x ForeverUI's card height (N.card 360x484)
+  local lay = C.LAYOUTS and C.LAYOUTS.min or { w = 673, h = 594, list = 274 }
+  return lay.w - 5 - lay.list - 2 - 6, 484     -- 386 x ForeverUI's card height (N.card 360x484)
 end
 C.CompactSchematicSize = compactSchematicSize
 local function isCompact() return C.opts and C.opts.compact and true or false end
