@@ -374,7 +374,7 @@ local function initCategoryRow(btn, entry, rl)
     C._collapsed[entry.key] = not C._collapsed[entry.key]
     syncIcon()
     C.RefreshRecipes()
-    if PlaySound then PlaySound(841) end
+    PlaySound("igMainMenuOptionCheckBoxOn")
   end)
 end
 
@@ -468,7 +468,7 @@ local function initRecipeRow(btn, entry, rl)
         end
       end
     end
-    if PlaySound then PlaySound(841) end
+    PlaySound("igMainMenuOptionCheckBoxOn")
   end)
 
   btn:SetScript("OnEnter", function()

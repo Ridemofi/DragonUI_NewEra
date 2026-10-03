@@ -83,8 +83,18 @@ function C.PlaceShared(frame)
   if t.point ~= "TOPLEFT" or t.relPoint ~= "BOTTOMLEFT" then C.SaveSharedPosition(frame) end
 end
 
+-- Open/close sounds as the stock TradeSkillFrame plays them, once for the unified window: a close is
+-- held one frame, and a show in that frame (book <-> crafting switch, either order) swallows both.
+local soundTimer = CreateFrame("Frame")
+soundTimer:Hide()
+soundTimer:SetScript("OnUpdate", function(self) self:Hide(); PlaySound("igCharacterInfoClose") end)
+
 function C.WireSharedPosition(frame)
-  frame:HookScript("OnShow", function(self) C.PlaceShared(self) end)
+  frame:HookScript("OnShow", function(self)
+    C.PlaceShared(self)
+    if soundTimer:IsShown() then soundTimer:Hide() else PlaySound("igCharacterInfoOpen") end
+  end)
+  frame:HookScript("OnHide", function() soundTimer:Show() end)
   frame:HookScript("OnDragStop", function(self) C.SaveSharedPosition(self) end)
 end
 
@@ -533,7 +543,10 @@ local function buildCogMenu(f, cog)
     end
 
     cb:SetChecked(getfn())
-    cb:SetScript("OnClick", function(self) setfn(self:GetChecked() and true or false) end)
+    cb:SetScript("OnClick", function(self)
+      PlaySound(self:GetChecked() and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
+      setfn(self:GetChecked() and true or false)
+    end)
     cb._sync = function() cb:SetChecked(getfn()) end
     return cb
   end
@@ -594,6 +607,7 @@ local function buildCog(f)
   cog.Hi:SetPoint("CENTER"); cog.Hi:SetBlendMode("ADD"); cog.Hi:SetAlpha(0.4)
   cog:SetScript("OnClick", function()
     local menu = buildCogMenu(f, cog)
+    PlaySound("igMainMenuOptionCheckBoxOn")
     if menu:IsShown() then menu:Hide() else menu:Show() end
   end)
   f.Cog = cog

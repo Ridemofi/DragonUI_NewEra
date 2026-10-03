@@ -49,4 +49,11 @@ function compat.RecordStub(sym, why)
     compat.stubs[#compat.stubs + 1] = { sym = sym, why = why }
 end
 
+-- SOUNDKIT keys ClassicAPI's table lacks (3.3.5a PlaySound takes names, so a nil key is silence).
+if SOUNDKIT then
+    SOUNDKIT.IG_CHARACTER_INFO_OPEN  = SOUNDKIT.IG_CHARACTER_INFO_OPEN  or "igCharacterInfoOpen"
+    SOUNDKIT.IG_CHARACTER_INFO_CLOSE = SOUNDKIT.IG_CHARACTER_INFO_CLOSE or "igCharacterInfoClose"
+    SOUNDKIT.LOOT_WINDOW_COIN_SOUND  = SOUNDKIT.LOOT_WINDOW_COIN_SOUND  or "LOOTWINDOWCOINSOUND"
+end
+
 -- print nothing on success (per contract).
