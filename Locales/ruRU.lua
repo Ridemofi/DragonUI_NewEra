@@ -417,75 +417,75 @@ L["Select All"] = "Выделить всё"
 -- BOSS TIMERS (modules/bossmods)
 -- ============================================================================
 
-L["Boss Timers"] = true
-L["Boss Abilities"] = true
-L["Boss Warnings"] = true
-L["Boss Warning - Critical"] = true
-L["Boss Warning - Medium"] = true
-L["Boss Warning - Minor"] = true
-L["Boss ability timers as a retail-style timeline or bar list. Reads its encounter data from DBM; without DBM installed there is nothing to show."] = true
-L["Large on-screen warnings for important boss abilities. Needs DBM and the Boss Timers module."] = true
-L["|cffff5555DBM is not installed.|r This module renders boss ability timers, it does not detect them — the encounter data comes from Deadly Boss Mods. Install DBM and reload to use it; the switches below are saved either way."] = true
-L["Retail's boss ability timeline, drawn from |cffffcc55DBM's|r timers. Shows as a vertical rail of ability icons sliding toward now, or as a list of depleting bars. |cffffcc55Off by default.|r"] = true
-L["|cffffcc55Everything else is on the frames themselves.|r Open |cffffcc55/dragonui edit|r, click a Boss Timers handle, and its own dialog carries the view, size, length, opacity, tooltips and the rest — each warning tier included, edited from the tier you clicked."] = true
-L["Enable Boss Timers"] = true
-L["The timeline and the three warning lines together. While it is on, DBM's own bars and warnings are hidden so the same timers are not drawn twice — its sounds and voice packs are left alone. Off by default. Reload (/reload) to apply."] = true
-L["View"] = true
-L["Timeline (rail)"] = true
-L["Bars"] = true
-L["Show the frame"] = true
-L["Only while timers are running"] = true
-L["Icon size"] = true
-L["Rail length"] = true
-L["Bar width"] = true
-L["Space between bars"] = true
-L["Show the countdown"] = true
-L["Show the ability name"] = true
-L["Timeline view only — the bar list always names its abilities."] = true
-L["Show a test timer"] = true
-L["Runs four sample timers and one warning through the same path a real DBM timer takes, so what you see is what an encounter will look like."] = true
-L["Glow when an ability is imminent"] = true
-L["On by default. The action-button proc glow, held for the last five seconds before an ability lands. It stands in for a retail effect this client cannot draw; with it off you get only the brief border flash, which is easy to miss."] = true
-L["Revert Changes"] = true
-L["Reset to Default"] = true
-L["Timeline view only. How far out the rail reaches — the icons space themselves along it."] = true
-L["Bars view only."] = true
-L["Size"] = true
-L["Scales the whole frame — the rail, the icons and the text together. Icon Size below scales only the icons."] = true
-L["Background"] = true
-L["The plate behind the frame. Retail ships it invisible."] = true
-L["Scales the whole warning — text and both flanking icons together."] = true
-L["The two spell icons either side of the text."] = true
+L["Boss Timers"] = "Таймеры боссов"
+L["Boss Abilities"] = "Способности боссов"
+L["Boss Warnings"] = "Предупреждения боссов"
+L["Boss Warning - Critical"] = "Предупреждение босса - Критическое"
+L["Boss Warning - Medium"] = "Предупреждение босса - Среднее"
+L["Boss Warning - Minor"] = "Предупреждение босса - Незначительное"
+L["Boss ability timers as a retail-style timeline or bar list. Reads its encounter data from DBM; without DBM installed there is nothing to show."] = "Таймеры способностей боссов в виде шкалы времени или списка полос в стиле retail. Данные о сражении считываются из DBM; если DBM не установлен, показывать будет нечего."
+L["Large on-screen warnings for important boss abilities. Needs DBM and the Boss Timers module."] = "Крупные предупреждения на экране о важных способностях босса. Требуется DBM и модуль «Таймеры боссов»."
+L["|cffff5555DBM is not installed.|r This module renders boss ability timers, it does not detect them — the encounter data comes from Deadly Boss Mods. Install DBM and reload to use it; the switches below are saved either way."] = "|cffff5555DBM не установлен.|r Этот модуль отображает таймеры способностей босса, но не отслеживает их — данные о сражениях берутся из Deadly Boss Mods. Установите DBM и выполните /reload для использования; переключатели ниже сохраняются в любом случае."
+L["Retail's boss ability timeline, drawn from |cffffcc55DBM's|r timers. Shows as a vertical rail of ability icons sliding toward now, or as a list of depleting bars. |cffffcc55Off by default.|r"] = "Шкала времени способностей босса из retail, основанная на таймерах |cffffcc55DBM|r. Отображается в виде вертикальной направляющей со значками способностей, ползущими к текущему моменту, или в виде списка убывающих полос. |cffffcc55По умолчанию выключено.|r"
+L["|cffffcc55Everything else is on the frames themselves.|r Open |cffffcc55/dragonui edit|r, click a Boss Timers handle, and its own dialog carries the view, size, length, opacity, tooltips and the rest — each warning tier included, edited from the tier you clicked."] = "|cffffcc55Всё остальное настраивается на самих окнах.|r Откройте |cffffcc55/dragonui edit|r, нажмите на маркер «Таймеры боссов», и в появившемся диалоге можно будет настроить вид, размер, длину, непрозрачность, подсказки и всё остальное — включая все уровни предупреждений, которые редактируются при клике по соответствующему уровню."
+L["Enable Boss Timers"] = "Включить таймеры боссов"
+L["The timeline and the three warning lines together. While it is on, DBM's own bars and warnings are hidden so the same timers are not drawn twice — its sounds and voice packs are left alone. Off by default. Reload (/reload) to apply."] = "Шкала времени и три строки предупреждений вместе. Пока это включено, собственные полосы и предупреждения DBM скрыты, чтобы одни и те же таймеры не отрисовывались дважды — звуки и голосовые пакеты остаются нетронутыми. По умолчанию выключено. Для применения выполните /reload."
+L["View"] = "Вид"
+L["Timeline (rail)"] = "Шкала времени (направляющая)"
+L["Bars"] = "Полосы"
+L["Show the frame"] = "Показывать окно"
+L["Only while timers are running"] = "Только когда запущены таймеры"
+L["Icon size"] = "Размер значков"
+L["Rail length"] = "Длина направляющей"
+L["Bar width"] = "Ширина полосы"
+L["Space between bars"] = "Расстояние между полосами"
+L["Show the countdown"] = "Показывать отсчёт"
+L["Show the ability name"] = "Показывать название способности"
+L["Timeline view only — the bar list always names its abilities."] = "Только для режима шкалы времени — список полос всегда отображает названия способностей."
+L["Show a test timer"] = "Показать тестовый таймер"
+L["Runs four sample timers and one warning through the same path a real DBM timer takes, so what you see is what an encounter will look like."] = "Запускает четыре примерных таймера и одно предупреждение по тому же пути, что и настоящий таймер DBM, чтобы вы увидели, как это будет выглядеть в бою."
+L["Glow when an ability is imminent"] = "Свечение перед применением способности"
+L["On by default. The action-button proc glow, held for the last five seconds before an ability lands. It stands in for a retail effect this client cannot draw; with it off you get only the brief border flash, which is easy to miss."] = "По умолчанию включено. Свечение срабатывания кнопки действия, удерживаемое последние пять секунд до применения способности. Заменяет эффект из retail, который этот клиент отрисовать не может; если выключить, будет только короткая вспышка рамки, которую легко пропустить."
+L["Revert Changes"] = "Отменить изменения"
+L["Reset to Default"] = "Сброс по умолчанию"
+L["Timeline view only. How far out the rail reaches — the icons space themselves along it."] = "Только для режима шкалы времени. Насколько далеко уходит направляющая — значки распределяются вдоль неё."
+L["Bars view only."] = "Только для режима полос."
+L["Size"] = "Размер"
+L["Scales the whole frame — the rail, the icons and the text together. Icon Size below scales only the icons."] = "Масштабирует всё окно целиком: направляющую, значки и текст. «Размер значков» ниже масштабирует только сами значки."
+L["Background"] = "Фон"
+L["The plate behind the frame. Retail ships it invisible."] = "Панель позади окна. В retail по умолчанию она невидима."
+L["Scales the whole warning — text and both flanking icons together."] = "Масштабирует всё предупреждение целиком: текст и оба значка по бокам."
+L["The two spell icons either side of the text."] = "Два значка заклинания по обе стороны от текста."
 L["Orientation"] = "Ориентация"
 L["Vertical"] = "Вертикально"
 L["Horizontal"] = "Горизонтально"
-L["Icon direction"] = true
-L["Down / Right"] = true
-L["Up / Left"] = true
-L["Tooltips"] = true
-L["At the cursor"] = true
-L["Beside the frame"] = true
-L["Off"] = true
-L["Flip horizontally"] = true
-L["Timeline view only. Which way the rail runs; the icons travel along it either way."] = true
-L["Timeline view only. Which end of the rail is |cffffcc55now|r — the end abilities travel toward and go off at."] = true
-L["Bars view only. Mirrors each row — the icon moves to the right and the bar drains the other way."] = true
-L["Hovering an ability shows its spell tooltip. DBM raises some timers that are not a spell at all — a pull timer, a phase change — and those show their own name instead."] = true
-L["Show the ability icons"] = true
-L["The two copies of the ability's own icon either side of the text — what retail draws. The text already names the ability, so this is decoration; turn it off for a plain line of text."] = true
+L["Icon direction"] = "Направление значков"
+L["Down / Right"] = "Вниз / Вправо"
+L["Up / Left"] = "Вверх / Влево"
+L["Tooltips"] = "Подсказки"
+L["At the cursor"] = "У курсора"
+L["Beside the frame"] = "Рядом с окном"
+L["Off"] = "Выкл."
+L["Flip horizontally"] = "Отразить по горизонтали"
+L["Timeline view only. Which way the rail runs; the icons travel along it either way."] = "Только для режима шкалы времени. В какую сторону идёт направляющая; значки движутся вдоль неё в любом случае."
+L["Timeline view only. Which end of the rail is |cffffcc55now|r — the end abilities travel toward and go off at."] = "Только для режима шкалы времени. Какой конец направляющей означает |cffffcc55текущий момент|r — конец, к которому движутся и на котором срабатывают способности."
+L["Bars view only. Mirrors each row — the icon moves to the right and the bar drains the other way."] = "Только для режима полос. Отзеркаливает каждую строку — значок перемещается вправо, а полоса убывает в обратную сторону."
+L["Hovering an ability shows its spell tooltip. DBM raises some timers that are not a spell at all — a pull timer, a phase change — and those show their own name instead."] = "При наведении на способность отображается её подсказка. DBM запускает некоторые таймеры, которые вообще не являются заклинаниями (таймер пула, смена фазы), — для них вместо этого отображается их собственное название."
+L["Show the ability icons"] = "Показывать значки способностей"
+L["The two copies of the ability's own icon either side of the text — what retail draws. The text already names the ability, so this is decoration; turn it off for a plain line of text."] = "Две копии собственного значка способности по обе стороны от текста — как это отрисовывается в retail. В тексте уже есть название способности, так что это просто украшение; выключите для отображения обычного текста."
 
 -- ============================================================================
 -- DAMAGE METER SKIN
 -- ============================================================================
 
-L["A retail-styled theme for |cffffcc55Details!|r, drawn with art from retail's own damage meter: a gold-titled header bar, class-coloured bars on a near-invisible panel, and abbreviated numbers. It is registered with Details! at login, so it also appears in Details!' own skin list under |cffffcc55New Era|r."] = true
-L["Apply the New Era skin"] = true
-L["Could not apply the skin — Details! is not ready yet."] = true
-L["Damage Meter Skin"] = true
-L["Details! is not installed."] = true
-L["Details! skin applied."] = true
-L["Run |cffffcc55/nedetails|r to apply it."] = true
-L["|cffff5555Details! is not installed.|r This is a theme for the Details! Damage Meter, not a meter of its own — with Details! absent there is nothing to skin."] = true
+L["A retail-styled theme for |cffffcc55Details!|r, drawn with art from retail's own damage meter: a gold-titled header bar, class-coloured bars on a near-invisible panel, and abbreviated numbers. It is registered with Details! at login, so it also appears in Details!' own skin list under |cffffcc55New Era|r."] = "Тема в стиле retail для |cffffcc55Details!|r, нарисованная с использованием графики из измерителя урона retail: заголовок с золотой рамкой, полосы цветов классов на почти невидимой панели и сокращённые числа. Она регистрируется в Details! при входе в игру, поэтому также появляется в собственном списке тем Details! в разделе |cffffcc55New Era|r."
+L["Apply the New Era skin"] = "Применить тему New Era"
+L["Could not apply the skin — Details! is not ready yet."] = "Не удалось применить тему — Details! ещё не готов."
+L["Damage Meter Skin"] = "Тема измерителя урона"
+L["Details! is not installed."] = "Details! не установлен."
+L["Details! skin applied."] = "Тема Details! применена."
+L["Run |cffffcc55/nedetails|r to apply it."] = "Выполните |cffffcc55/nedetails|r, чтобы применить её."
+L["|cffff5555Details! is not installed.|r This is a theme for the Details! Damage Meter, not a meter of its own — with Details! absent there is nothing to skin."] = "|cffff5555Details! не установлен.|r Это тема для измерителя урона Details!, а не самостоятельный аддон — без Details! менять оформление не к чему."
 
 -- ============================================================================
 -- DAMAGE METER SKIN
@@ -495,7 +495,7 @@ L["|cffff5555Details! is not installed.|r This is a theme for the Details! Damag
 -- DAMAGE METER SKIN
 -- ============================================================================
 
-L["Switches every Details! window to the skin and sets K/M number abbreviation. Window size and position stay yours — use Details!' own scale slider for those. Your choice is remembered and put back after a reload (Details! does not keep it on its own); picking another skin in Details! ends that. Run this again after you customise something in Details! and want the theme back."] = true
+L["Switches every Details! window to the skin and sets K/M number abbreviation. Window size and position stay yours — use Details!' own scale slider for those. Your choice is remembered and put back after a reload (Details! does not keep it on its own); picking another skin in Details! ends that. Run this again after you customise something in Details! and want the theme back."] = "Переключает каждое окно Details! на эту тему и устанавливает сокращение чисел К/М. Размер и положение окна остаются вашими — для их настройки используйте собственный ползунок масштаба Details!. Ваш выбор запоминается и возвращается после перезагрузки (Details! не сохраняет его самостоятельно); выбор другой темы в Details! отменяет это поведение. Выполните это снова, если вы что-то изменили в Details! и хотите вернуть тему New Era."
 
 -- ============================================================================
 -- OPTIONS PANEL
