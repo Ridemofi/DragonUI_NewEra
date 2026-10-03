@@ -443,6 +443,15 @@ local function initRecipeRow(btn, entry, rl)
       end
       return
     end
+    -- Shift-click: link the recipe into chat (as the stock trade skill window does), no selection.
+    if IsModifiedClick("CHATLINK") then
+      local link = r.recipeLink
+        or (not r.cached and not r.isCraft and GetTradeSkillRecipeLink and GetTradeSkillRecipeLink(r.index))
+        or (not r.cached and r.isCraft and GetCraftItemLink and GetCraftItemLink(r.index))
+        or r.link
+      if link then C.LinkToChat(link) end
+      return
+    end
     -- Left-click: select recipe.
     if r.isCraft then
       if SelectCraft then pcall(SelectCraft, r.index) end

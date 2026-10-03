@@ -279,10 +279,10 @@ check("SPELL_UPDATE_COOLDOWN clears the swipe", smelt.cooldown._cd[2] == 0)
 local alch = f.primaries[1].spells[1]
 check("plain click still casts (type1 = spell)", alch._attrs.type == "spell" and alch._attrs.spell == "Alchemy")
 check("shift-click routed off the cast", alch._attrs["shift-type1"] == "link" and alch._attrs["shift-type2"] == "link")
-local menuLink
-NE.profcraft.ShowLinkMenu = function(l) menuLink = l end   -- the picker itself is tested below
+local chatLink
+NE.profcraft.LinkToChat = function(l) chatLink = l end   -- the chat path itself is tested below
 modified = true; alch:Run("PostClick", "LeftButton")
-check("shift-click opens the picker with the trade-skill link", menuLink == "|Htrade:2259|h[Alchemy]|h", menuLink)
+check("shift-click puts the trade-skill link straight into chat", chatLink == "|Htrade:2259|h[Alchemy]|h", chatLink)
 modified = false; menuLink = nil; alch:Run("PostClick", "LeftButton")
 check("plain click opens nothing", menuLink == nil)
 
@@ -375,9 +375,12 @@ function GetChannelName(id) for i = 1, #channels, 2 do if channels[i] == id then
 SAY, PARTY, RAID, GUILD = "Say", "Party", "Raid", "Guild"
 local chatBox = new("ChatEditBox"); chatBox._attrs.chatType = "SAY"
 local opened, header = 0, 0
+-- As on 3.3.5a: no active box until ChatFrame_OpenChat, which only STORES its text (the box writes it
+-- on its next OnUpdate) -- inserting into the box right after opening with "" was wiped that way.
+local active
 function ChatEdit_GetLastActiveWindow() return chatBox end
-function ChatEdit_GetActiveWindow() return chatBox end
-function ChatFrame_OpenChat() opened = opened + 1 end
+function ChatEdit_GetActiveWindow() return active end
+function ChatFrame_OpenChat(text) opened = opened + 1; active = chatBox; chatBox._pendingText = text end
 function ChatEdit_UpdateHeader() header = header + 1 end
 function ChatEdit_InsertLink(l) chatBox._inserted = l; return true end
 local function labels()
@@ -399,7 +402,12 @@ local trade = C.LinkDestinations()[1]
 C.SendLinkTo(trade, "|Htrade:1|h[x]|h")
 check("pick opens the chat box", opened == 1 and header == 1)
 check("pick sets the channel", chatBox._attrs.chatType == "CHANNEL" and chatBox._attrs.channelTarget == 2)
-check("pick inserts the link, unsent", chatBox._inserted == "|Htrade:1|h[x]|h")
+check("pick opens chat WITH the link as its text, unsent", chatBox._pendingText == "|Htrade:1|h[x]|h", chatBox._pendingText)
+-- chat already open: the link goes into it, no reopen
+chatBox._inserted = nil; local before = opened
+C.SendLinkTo(trade, "|Htrade:2|h[y]|h")
+check("chat already open: link inserted, not reopened", chatBox._inserted == "|Htrade:2|h[y]|h" and opened == before)
+active = nil
 local shown
 function EasyMenu(items) shown = items end
 C.ShowLinkMenu("|Htrade:1|h[x]|h")

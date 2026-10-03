@@ -119,7 +119,7 @@ function Cache.Tree(profName)
     local c = e and byCat[e.cat]
     if c then
       c.recipes[#c.recipes + 1] = { name = name, difficulty = e.difficulty or "trivial", learned = true,
-        numAvailable = 0, numSkillUps = 0, cached = true, icon = e.icon, link = e.link, isCraft = e.isCraft }
+        numAvailable = 0, numSkillUps = 0, cached = true, icon = e.icon, link = e.link, recipeLink = e.recipeLink, isCraft = e.isCraft }
     end
   end
   return out

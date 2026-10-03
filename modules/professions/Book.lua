@@ -232,8 +232,8 @@ local function buildSpellButton(card)
   b:SetScript("PostClick", function(self)
     if self.bookSlot and IsModifiedClick and IsModifiedClick("CHATLINK") then
       local link, tradeLink = GetSpellLink(self.bookSlot, BOOKTYPE)
-      -- Destination picker (Crafting.lua): Trade / Party / Raid / Guild / current chat.
-      if tradeLink or link then NE.profcraft.ShowLinkMenu(tradeLink or link, self) end
+      -- Shift-click: straight into the chat box on its current channel (the link button offers the picker).
+      if tradeLink or link then NE.profcraft.LinkToChat(tradeLink or link) end
     end
   end)
 

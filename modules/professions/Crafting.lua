@@ -787,7 +787,9 @@ local function buildReagentSlot(parent)
   -- Shift-click → link the reagent in chat; Ctrl-click → try it on (no-op for non-equippable).
   iconHit:RegisterForClicks("LeftButtonUp")
   iconHit:SetScript("OnClick", function()
-    if b._link and HandleModifiedItemClick then HandleModifiedItemClick(b._link) end
+    if not b._link then return end
+    if IsModifiedClick("CHATLINK") then C.LinkToChat(b._link)
+    elseif HandleModifiedItemClick then HandleModifiedItemClick(b._link) end
   end)
   b.IconHit = iconHit
 
@@ -840,7 +842,9 @@ function C.buildSchematicForm(f)
   -- dressing room. HandleModifiedItemClick (stock 3.3.5a) routes both from the item link.
   out:RegisterForClicks("LeftButtonUp")
   out:SetScript("OnClick", function()
-    if out._link and HandleModifiedItemClick then HandleModifiedItemClick(out._link) end
+    if not out._link then return end
+    if IsModifiedClick("CHATLINK") then C.LinkToChat(out._link)
+    elseif HandleModifiedItemClick then HandleModifiedItemClick(out._link) end
   end)
   sf.OutputIcon = out
 
@@ -1167,7 +1171,8 @@ function C.buildLinkButton(f)
   link:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
   link:SetScript("OnClick", function(self)
     local link2 = GetTradeSkillListLink and GetTradeSkillListLink()
-    if link2 then C.ShowLinkMenu(link2, self) end
+    if not link2 then return end
+    if IsModifiedClick("CHATLINK") then C.LinkToChat(link2) else C.ShowLinkMenu(link2, self) end
   end)
   f.LinkButton = link
 end
@@ -1217,8 +1222,15 @@ function C.SetProfession(name)
     elseif iconPath and iconPath ~= "" then
       ic = iconPath
     end
-    if ic then f.PortraitTex:SetTexture(ic)
-    else f.PortraitTex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark") end
+    ic = ic or "Interface\\Icons\\INV_Misc_QuestionMark"
+    -- A stock square icon (First Aid has no round art of its own) is rounded the way the spellbook's
+    -- passives are: SetPortraitToTexture. SetMask below is retail-only, so it never rounded anything
+    -- on 3.3.5a -- the square showed in the portrait ring.
+    if type(ic) == "string" and ic:lower():find("^interface\\icons\\") and SetPortraitToTexture then
+      SetPortraitToTexture(f.PortraitTex, ic)
+    else
+      f.PortraitTex:SetTexture(ic)
+    end
     -- Re-apply the circular mask after every SetTexture — on 3.3.5a SetTexture clears the mask.
     if f.PortraitTex.SetMask then
       f.PortraitTex:SetMask("Interface\\CharacterFrame\\TempPortraitAlphaMask")
@@ -2056,17 +2068,34 @@ function C.LinkDestinations()
   return out
 end
 
+-- 3.3.5a's ChatFrame_OpenChat(text) does not write the text: it stores it and the edit box applies it
+-- on its next OnUpdate (editBox.setText). So the link IS the text we open with -- inserting after
+-- opening with "" was wiped one frame later. When a chat box is already open, insert into it.
+local function openChatWith(link)
+  local open = ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow()
+  if open then
+    if not (ChatEdit_InsertLink and ChatEdit_InsertLink(link)) then open:Insert(link) end
+    return open
+  end
+  if ChatFrame_OpenChat then ChatFrame_OpenChat(link) end
+  return ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow()
+end
+
+-- Shift-click: the link into the chat box, on whatever channel it is set to -- opening it if it is not
+-- open (stock HandleModifiedItemClick only inserts into an already open box).
+function C.LinkToChat(link)
+  if not link then return false end
+  return openChatWith(link) ~= nil
+end
+
 function C.SendLinkTo(d, link)
   if not (d and link) then return end
-  if ChatFrame_OpenChat then ChatFrame_OpenChat("") end
-  local eb = (ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow())
-          or (ChatEdit_ChooseBoxForSend and ChatEdit_ChooseBoxForSend())
+  local eb = openChatWith(link)
   if not eb then return end
   eb:SetAttribute("chatType", d.chatType)
   if d.chatType == "CHANNEL" then eb:SetAttribute("channelTarget", d.channel) end
   if d.chatType == "WHISPER" and d.tell then eb:SetAttribute("tellTarget", d.tell) end
   if ChatEdit_UpdateHeader then ChatEdit_UpdateHeader(eb) end
-  if not (ChatEdit_InsertLink and ChatEdit_InsertLink(link)) then eb:Insert(link) end
 end
 
 function C.ShowLinkMenu(link, anchor)
