@@ -378,6 +378,16 @@ local function initCategoryRow(btn, entry, rl)
   end)
 end
 
+local function updateTooltipComparison(owner)
+  if not (owner and GameTooltip:IsOwned(owner)) then return end
+  if IsModifiedClick("COMPAREITEMS") or (GetCVarBool and GetCVarBool("alwaysCompareItems")) then
+    GameTooltip_ShowCompareItem(GameTooltip)
+  else
+    if ShoppingTooltip1 then ShoppingTooltip1:Hide() end
+    if ShoppingTooltip2 then ShoppingTooltip2:Hide() end
+  end
+end
+
 local function initRecipeRow(btn, entry, rl)
   local r = entry.r
   ensureRecipeWidgets(btn)
@@ -476,20 +486,31 @@ local function initRecipeRow(btn, entry, rl)
     if C.opts and C.opts.hideListTooltips then return end
     GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
     local shown = false
-    if r.isCraft and GameTooltip.SetCraftSpell then
-      local ok = pcall(GameTooltip.SetCraftSpell, GameTooltip, r.index)
-      shown = ok
-    elseif GameTooltip.SetTradeSkillItem then
-      local ok = pcall(GameTooltip.SetTradeSkillItem, GameTooltip, r.index)
-      shown = ok
+    if not r.cached and r.isCraft and GameTooltip.SetCraftSpell and r.index then
+      shown = pcall(GameTooltip.SetCraftSpell, GameTooltip, r.index)
+    elseif not r.cached and GameTooltip.SetTradeSkillItem and r.index then
+      shown = pcall(GameTooltip.SetTradeSkillItem, GameTooltip, r.index)
+    end
+    if not shown then
+      local link = r.recipeLink
+        or (not r.cached and not r.isCraft and GetTradeSkillItemLink and GetTradeSkillItemLink(r.index))
+        or (not r.cached and r.isCraft and GetCraftItemLink and GetCraftItemLink(r.index))
+        or r.link
+      if link and GameTooltip.SetHyperlink then
+        shown = pcall(GameTooltip.SetHyperlink, GameTooltip, link)
+      end
     end
     if not shown then
       GameTooltip:ClearLines()
       GameTooltip:AddLine(r.name or "Recipe", 1, 1, 1)
     end
     GameTooltip:Show()
+    updateTooltipComparison(btn)
   end)
+  btn:SetScript("OnUpdate", updateTooltipComparison)
   btn:SetScript("OnLeave", function()
+    if ShoppingTooltip1 then ShoppingTooltip1:Hide() end
+    if ShoppingTooltip2 then ShoppingTooltip2:Hide() end
     if GameTooltip_Hide then GameTooltip_Hide() else GameTooltip:Hide() end
   end)
 end

@@ -739,6 +739,16 @@ local function readProfessionRank()
   return profName, rank, maxRank
 end
 
+local function updateTooltipComparison(owner)
+  if not (owner and GameTooltip:IsOwned(owner)) then return end
+  if IsModifiedClick("COMPAREITEMS") or (GetCVarBool and GetCVarBool("alwaysCompareItems")) then
+    GameTooltip_ShowCompareItem(GameTooltip)
+  else
+    if ShoppingTooltip1 then ShoppingTooltip1:Hide() end
+    if ShoppingTooltip2 then ShoppingTooltip2:Hide() end
+  end
+end
+
 -- ============================================================================
 -- buildReagentSlot — one 48px-tall reagent row (icon + count + name).
 -- ============================================================================
@@ -780,10 +790,15 @@ local function buildReagentSlot(parent)
   b.Name:SetPoint("RIGHT", b,       "RIGHT", -2, 0)
   b.Name:SetJustifyH("LEFT")
 
-  -- Tooltip hit area: small button covering the icon only.
+-- Tooltip hit area: small button covering the icon only.
   local iconHit = CreateFrame("Button", nil, b)
   iconHit:SetAllPoints(b.SlotBg)
-  iconHit:SetScript("OnLeave", function() if GameTooltip_Hide then GameTooltip_Hide() else GameTooltip:Hide() end end)
+  iconHit:SetScript("OnUpdate", updateTooltipComparison)
+  iconHit:SetScript("OnLeave", function()
+    if ShoppingTooltip1 then ShoppingTooltip1:Hide() end
+    if ShoppingTooltip2 then ShoppingTooltip2:Hide() end
+    if GameTooltip_Hide then GameTooltip_Hide() else GameTooltip:Hide() end
+  end)
   -- Shift-click → link the reagent in chat; Ctrl-click → try it on (no-op for non-equippable).
   iconHit:RegisterForClicks("LeftButtonUp")
   iconHit:SetScript("OnClick", function()
@@ -833,11 +848,24 @@ function C.buildSchematicForm(f)
   out:SetScript("OnEnter", function()
     local rec = out._recipe; if not rec then return end
     GameTooltip:SetOwner(out, "ANCHOR_RIGHT")
-    if rec.isCraft and GameTooltip.SetCraftSpell then GameTooltip:SetCraftSpell(rec.index)
-    elseif GameTooltip.SetTradeSkillItem then GameTooltip:SetTradeSkillItem(rec.index) end
+    local shown = false
+    if not rec.cached and rec.isCraft and GameTooltip.SetCraftSpell and rec.index then
+      shown = pcall(GameTooltip.SetCraftSpell, GameTooltip, rec.index)
+    elseif not rec.cached and GameTooltip.SetTradeSkillItem and rec.index then
+      shown = pcall(GameTooltip.SetTradeSkillItem, GameTooltip, rec.index)
+    end
+    if not shown and out._link and GameTooltip.SetHyperlink then
+      shown = pcall(GameTooltip.SetHyperlink, GameTooltip, out._link)
+    end
     GameTooltip:Show()
+    updateTooltipComparison(out)
   end)
-  out:SetScript("OnLeave", function() if GameTooltip_Hide then GameTooltip_Hide() else GameTooltip:Hide() end end)
+  out:SetScript("OnUpdate", updateTooltipComparison)
+  out:SetScript("OnLeave", function()
+    if ShoppingTooltip1 then ShoppingTooltip1:Hide() end
+    if ShoppingTooltip2 then ShoppingTooltip2:Hide() end
+    if GameTooltip_Hide then GameTooltip_Hide() else GameTooltip:Hide() end
+  end)
   -- Shift-click → link the crafted item in an open chat edit box; Ctrl-click → try it on in the
   -- dressing room. HandleModifiedItemClick (stock 3.3.5a) routes both from the item link.
   out:RegisterForClicks("LeftButtonUp")
@@ -1838,6 +1866,7 @@ function C.UpdateReagents(r)
           GameTooltip:AddLine(("%d / %d"):format(rHave or 0, rCount or 1), 0.8, 0.8, 0.8)
         end
         GameTooltip:Show()
+        updateTooltipComparison(s.IconHit)
       end)
       s:Show()
     else
