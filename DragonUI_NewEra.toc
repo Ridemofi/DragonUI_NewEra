@@ -241,6 +241,7 @@ modules\encounterjournal\AbilitiesWotLK.lua
 modules\encounterjournal\LootEra.lua
 modules\encounterjournal\ModelCam.lua
 modules\encounterjournal\EncounterItem.lua
+modules\encounterjournal\WorldMapSupport.lua
 modules\encounterjournal\EncounterPage.lua
 modules\encounterjournal\NavBar.lua
 modules\encounterjournal\EncounterJournal.lua
