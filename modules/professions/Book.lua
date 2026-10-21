@@ -595,6 +595,7 @@ function M.UpdateCooldowns()
 end
 
 function M.Toggle()
+  if NE.profcraft.IsModuleEnabled and not NE.profcraft.IsModuleEnabled() then return end
   if inCombat() then
     UIErrorsFrame:AddMessage(ERR_NOT_IN_COMBAT, 1, 0.1, 0.1)
     return

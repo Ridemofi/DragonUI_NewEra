@@ -1003,7 +1003,7 @@ local function interceptBlizzard()
 end
 
 _G.SLASH_NETALENTS1 = "/netalents"
-SlashCmdList["NETALENTS"] = function() T.Toggle() end
+SlashCmdList["NETALENTS"] = function() if NE.modules.IsEnabled("Talents") then T.Toggle() end end
 
 -- ----------------------------------------------------------------------------
 -- Boot. PLAYER_LOGIN builds the window + Host + Blizzard reroute. Scale/display events re-pin.

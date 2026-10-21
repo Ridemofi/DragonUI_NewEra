@@ -900,6 +900,7 @@ end
 -- TradeSkill/Craft frames are restored, and our window stays hidden.
 -- ============================================================================
 local function isModuleEnabled()
+  if NE.modules and NE.modules.RETIRED and NE.modules.RETIRED[MODULE] then return false end
   local dragon = NE.dragon
   if not (dragon and dragon.db and dragon.db.profile) then return true end
   local ne = dragon.db.profile.newera

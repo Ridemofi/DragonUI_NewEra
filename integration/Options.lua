@@ -74,10 +74,9 @@ local function builder(scroll)
         --   { id = "bags", label = "Retail bags" }
         -- No Character panel or Collections rows here: DragonUI ships both of those windows itself,
         -- so ours were removed outright rather than kept as a second replacement over the top.
+        -- Spellbook, Talents, Professions and Merchant are retired the same way, but their code is
+        -- kept dormant (NE.modules.RETIRED, core/Modules.lua).
         local WINDOWS = {
-            { id = "Spellbook",   label = SPELLBOOK or L["Spellbook"] },
-            { id = "Talents",     label = TALENTS or L["Talents"] },
-            { id = "Professions", label = L["Professions"] },
             { id = "AuctionHouse", label = L["Auction House"] },
             { id = "Social",      label = L["Social (Friends/Who/Guild/Chat/Raid)"] },
             -- A reskin rather than a replacement window: OFF here means Blizzard's own inspect
@@ -85,10 +84,6 @@ local function builder(scroll)
             { id = "Inspect",     label = L["Inspect window"],
               desc = L["Modern frame, portrait and tabs on the inspect window, with its Character "
                      .. "tab laid out like the character window. Reload (/reload) to apply."] },
-            -- Also a reskin, not a replacement window: OFF means Blizzard's own vendor frame.
-            { id = "MerchantFrame", label = L["Merchant window"],
-              desc = L["Modern frame, portrait and tabs on the vendor window, plus a sell-all-junk "
-                     .. "button and the buyback undo arrow. Reload (/reload) to apply."] },
             { id = "LFG",         label = L["Looking For Group (Dungeon/Raid Finder)"] },
             { id = "combinedbag", label = L["Combined bag (all-in-one)"],
               desc = L["Our all-in-one bag window. Turn OFF to use the stock Blizzard bags instead. Reload (/reload) to apply."] },
@@ -154,9 +149,6 @@ local function builder(scroll)
         -- A window that hasn't been opened yet this session simply has no frame registered — the
         -- setting still persists and applies on its first build.
         local WINDOWS = {
-            { key = "spellbook",       label = SPELLBOOK or L["Spellbook"] },
-            { key = "talents",         label = TALENTS or L["Talents"] },
-            { key = "professions",     label = L["Professions"] },
             { key = "social",          label = L["Social"] },
             { key = "guild",           label = GUILD or L["Guild"] },
             { key = "lfg",             label = L["Looking For Group"] },

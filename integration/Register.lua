@@ -483,7 +483,8 @@ function NE.RegisterPanel(spec)
         end,
     }
     local dragon = NE.dragon
-    if dragon then
+    -- Retired panels stay out of DragonUI's module list too, or its Advanced tab offers a toggle.
+    if dragon and not (NE.modules and NE.modules.RETIRED and NE.modules.RETIRED[id]) then
         local registered = false
         local mr = dragon.ModuleRegistry
         if mr and type(mr.Register) == "function" then

@@ -41,8 +41,13 @@ local function dragonModulesTable(create)
 end
 Mods._dragonModulesTable = dragonModulesTable   -- exposed for the Integration agent / options
 
+-- Retired: DragonUI now ships its own window for these. The code stays dormant; no options row,
+-- and a stale saved `enabled = true` is ignored, so they can never boot.
+Mods.RETIRED = { Spellbook = true, Talents = true, Professions = true, MerchantFrame = true }
+
 -- Enable state. Reads DragonUI's profile first, then NewEra's own SV, then the registered default.
 function Mods.IsEnabled(name)
+  if Mods.RETIRED[name] then return false end
   local opts = Mods.registry[name]
   local default = not (opts and opts.default == false)
   -- (1) DragonUI profile: modules.<id>.enabled
