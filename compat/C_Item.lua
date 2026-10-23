@@ -1,12 +1,6 @@
 -- DragonUI_NewEra/compat/C_Item.lua
--- Fills the C_Item.* symbols !!!ClassicAPI does NOT define: GetItemSpell, GetItemQualityColor.
---
--- DOWNPORT: Classic 1.15 namespaced item queries under C_Item. !!!ClassicAPI is a
--- HARD dependency and loads first, providing GetItemInfo / GetItemInfoInstant /
--- GetItemIconByID / GetItemCount and the ItemLocation family. It does NOT, however,
--- define C_Item.GetItemSpell or C_Item.GetItemQualityColor — both of which v1 uses
--- (ItemGrid reads GetItemSpell; quality colouring reads GetItemQualityColor). We
--- forward those two to the 3.3.5a globals.
+-- The C_Item.* subset NewEra calls (GetItemSpell, GetItemQualityColor), forwarded to the
+-- 3.3.5a globals. Other C_Item reads in NewEra are guarded and fall back to the globals.
 
 local NE = DragonUI_NewEra
 if not NE or NE.disabled then return end
@@ -14,12 +8,12 @@ if not NE or NE.disabled then return end
 C_Item = C_Item or {}
 local C = C_Item
 
--- GetItemSpell(item) -> spellName, spellID  (same on 3.3.5; not provided by ClassicAPI).
+-- GetItemSpell(item) -> spellName, spellID  (same on 3.3.5).
 if not C.GetItemSpell then
     C.GetItemSpell = GetItemSpell
 end
 
--- GetItemQualityColor(quality) -> r, g, b, hex  (same on 3.3.5; not provided by ClassicAPI).
+-- GetItemQualityColor(quality) -> r, g, b, hex  (same on 3.3.5).
 if not C.GetItemQualityColor then
     if type(GetItemQualityColor) == "function" then
         C.GetItemQualityColor = GetItemQualityColor

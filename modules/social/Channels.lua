@@ -394,7 +394,7 @@ function SO.RefreshChannels()
         row.label:SetPoint("LEFT", row, "LEFT", 18, 0)
       end
       local isSel = (not e.header) and e == selectedEntry
-      if row._sel then row._sel:SetShown(isSel) end
+      if row._sel then NE.FrameUtil.SetShown(row._sel, isSel) end
       row:Show()
     else
       row._name, row._index, row._header = nil, nil, nil

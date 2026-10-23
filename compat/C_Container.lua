@@ -1,15 +1,8 @@
 -- DragonUI_NewEra/compat/C_Container.lua
--- Fills the C_Container.* symbols !!!ClassicAPI does NOT define:
---   GetContainerItemCooldown, GetContainerItemQuestInfo.
+-- The C_Container.* subset NewEra calls, mapped onto the 3.3.5a GetContainer* globals.
 --
 -- DOWNPORT: Classic 1.15 namespaced the container API under C_Container and changed
--- GetContainerItemInfo to return a TABLE. !!!ClassicAPI is a HARD dependency and loads
--- first, providing the table-returning GetContainerItemInfo plus GetContainerItemID /
--- GetContainerItemLink / GetContainerNumSlots / GetContainerNumFreeSlots /
--- UseContainerItem / PickupContainerItem. It marks GetContainerItemCooldown and
--- GetContainerItemQuestInfo as INCOMPLETE (it exposes GetItemCooldown, not the
--- container variant, and no quest-info accessor), so we fill those two — both of which
--- v1's ItemGrid uses (cooldown swipe + quest-item border).
+-- GetContainerItemInfo to return a TABLE. Each symbol is defined only when absent.
 
 local NE = DragonUI_NewEra
 if not NE or NE.disabled then return end
@@ -17,14 +10,31 @@ if not NE or NE.disabled then return end
 C_Container = C_Container or {}
 local C = C_Container
 
--- GetContainerItemCooldown(bag, slot) -> start, duration, enable. ClassicAPI does not
--- define this (it ships GetItemCooldown instead); forward to the 3.3.5a global.
+-- GetContainerItemInfo(bag, slot) -> table, or nil for an empty slot. Only the fields NewEra
+-- reads (no soulbound tooltip scan: nothing here reads isBound, and a scan per slot is costly).
+if not C.GetContainerItemInfo then
+    function C.GetContainerItemInfo(bag, slot)
+        local icon, count, locked, quality, readable, lootable, link = GetContainerItemInfo(bag, slot)
+        if not icon then return nil end
+        local value = link and select(11, GetItemInfo(link))
+        return {
+            iconFileID = icon, stackCount = count, isLocked = locked, quality = quality,
+            isReadable = readable, hasLoot = lootable, hyperlink = link, isFiltered = false,
+            hasNoValue = value == 0,
+            itemID = link and tonumber(link:match("item:(%d+)")),
+        }
+    end
+end
+
+if not C.GetContainerNumSlots then C.GetContainerNumSlots = GetContainerNumSlots end
+
+-- GetContainerItemCooldown(bag, slot) -> start, duration, enable. Forward to the 3.3.5a global.
 if not C.GetContainerItemCooldown then
     C.GetContainerItemCooldown = GetContainerItemCooldown
 end
 
--- GetContainerItemQuestInfo(bag, slot) -> table  (retail shape). ClassicAPI does not
--- define this. 3.3.5: GetContainerItemQuestInfo returns isQuestItem, questId, isActive
+-- GetContainerItemQuestInfo(bag, slot) -> table  (retail shape).
+-- 3.3.5: GetContainerItemQuestInfo returns isQuestItem, questId, isActive
 -- (positional). v1 only reads .isQuestItem / .questId, so adapt positional -> table; if
 -- the global is absent, return a safe empty table (no quest item) and record the partial.
 if not C.GetContainerItemQuestInfo then

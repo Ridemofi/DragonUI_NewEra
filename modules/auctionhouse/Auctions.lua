@@ -310,7 +310,7 @@ function AH.BuildAuctionsPane(parent)
     if pane.EmptyText then
       pane.EmptyText:SetText((id == 1) and "You have no auctions." or "You have no bids.")
     end
-    if cancelBtn then cancelBtn:SetShown(id == 1) end
+    if cancelBtn then NE.FrameUtil.SetShown(cancelBtn, id == 1) end
     requestActiveList()
     refreshActiveList()
   end
@@ -436,7 +436,7 @@ function AH.BuildAuctionsPane(parent)
           row.Text:SetPoint("RIGHT", row, "RIGHT", -4, 0)
           row.Text:SetText(e.name or "-")
         end
-        row.Sel:SetShown(row._index == selectedSummaryIndex)
+        NE.FrameUtil.SetShown(row.Sel, row._index == selectedSummaryIndex)
         row:Show()
       else
         row._index = nil

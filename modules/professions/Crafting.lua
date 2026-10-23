@@ -402,14 +402,14 @@ local function applyFillFrac(rb, frac)
   if rb._genericFill then
     if rb.BaseFill then
       rb.BaseFill:SetSize(w, FILL_H)
-      rb.BaseFill:SetShown(frac > 0)
+      NE.FrameUtil.SetShown(rb.BaseFill, frac > 0)
     end
     return
   end
 
   rb.Fill:SetWidth(w)
   rb.Fill._frac = frac
-  rb.Fill:SetShown(frac > 0)
+  NE.FrameUtil.SetShown(rb.Fill, frac > 0)
 
   -- While the flipbook runs, its driver re-crops from _frac every frame — but not until the NEXT
   -- frame, which lags the width by one tick during an animation, so re-crop now. A static

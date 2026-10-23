@@ -543,3 +543,70 @@ function NE.IsAddOnLoaded(name)
   local ok, loaded = pcall(fn, name)
   return (ok and loaded) and true or false
 end
+
+-- ── 3.3.5a widget-method stand-ins ──────────────────────────────────────────────────────────────
+-- Region:SetShown and :SetEnabled are Cata+; this client has neither (and an EditBox has no
+-- Enable/Disable at all). Call these instead of adding methods to the shared widget metatables.
+
+function NE.FrameUtil.SetShown(obj, on)
+  if not obj then return end
+  if on then obj:Show() else obj:Hide() end
+end
+
+-- Buttons/CheckButtons/Sliders use their native Enable/Disable. An EditBox is made inert by
+-- refusing the mouse (it is not auto-focus, so a click is its only way in) and greyed.
+function NE.FrameUtil.SetEnabled(obj, on)
+  if not obj then return end
+  if obj.Enable then
+    if on then obj:Enable() else obj:Disable() end
+    return
+  end
+  obj:EnableMouse(on and true or false)
+  if not on and obj.ClearFocus then obj:ClearFocus() end
+  if obj.SetTextColor then
+    if on then obj:SetTextColor(1, 1, 1) else obj:SetTextColor(0.5, 0.5, 0.5) end
+  end
+end
+
+-- A self-contained search box: a bare EditBox with a border, magnifier and "Search" placeholder.
+-- NOT the shared "SearchBoxTemplate": templates are global-by-name, other addons (ezCollections)
+-- ship their own with a broken OnLoad, and stock 3.3.5a has none. GetText() is genuinely "" when
+-- empty (the placeholder is a separate FontString). Callers HookScript their own OnTextChanged.
+function NE.FrameUtil.SearchBox(parent, name, width, height)
+  local sb = CreateFrame("EditBox", name, parent)
+  sb:SetSize(width or 200, height or 28)
+  sb:SetAutoFocus(false)
+  sb:SetFontObject(_G.ChatFontNormal or _G.GameFontHighlightSmall)   -- font OBJECT, not a string
+  sb:SetTextInsets(24, 8, 0, 0)   -- leave room for the magnifier icon at the left
+  sb:SetMaxLetters(40)
+  sb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+  sb:SetScript("OnEnterPressed",  function(self) self:ClearFocus() end)
+
+  sb:SetBackdrop({
+    bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 12,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 },
+  })
+  sb:SetBackdropColor(0, 0, 0, 0.6)
+  sb:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+
+  local icon = sb:CreateTexture(nil, "OVERLAY")
+  icon:SetSize(14, 14)
+  icon:SetPoint("LEFT", sb, "LEFT", 6, 0)
+  icon:SetTexture("Interface\\Common\\UI-Searchbox-Icon")
+  sb.searchIcon = icon
+
+  local ph = sb:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+  ph:SetPoint("LEFT", sb, "LEFT", 24, 0)
+  ph:SetText(_G.SEARCH or "Search")
+  sb.placeholder = ph
+
+  local function syncPlaceholder(self)
+    if (self:GetText() or "") == "" and not self:HasFocus() then ph:Show() else ph:Hide() end
+  end
+  sb:SetScript("OnTextChanged", syncPlaceholder)
+  sb:SetScript("OnEditFocusGained", function() ph:Hide() end)
+  sb:SetScript("OnEditFocusLost", syncPlaceholder)
+  return sb
+end

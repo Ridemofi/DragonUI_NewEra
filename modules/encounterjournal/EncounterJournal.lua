@@ -125,30 +125,13 @@ local function tierHasInstances(tier)
 end
 
 -- Window chrome — the AH/Guild recipe (modules/auctionhouse/Window.lua buildChrome), EJ
--- portrait/title. The ClassicAPI PortraitFrameTemplate supplies rock body + f.portrait +
--- f.TitleText; we overlay the DF metal nineslice + streaks + modernized close on top.
+-- portrait/title, all built on a bare frame: rock body, DF metal nineslice, streaks, portrait
+-- cutout, title band and modernized close.
 local function buildChrome(f)
   -- Modern grey window body: the same untinted UI-Background-Rock fill every other from-scratch
   -- standalone window builds (Guild/LFG/Professions/AuctionHouse/Social).
-  --
-  -- DOWNPORT FIX: we own a DEDICATED texture rather than re-texturing the template's own fill.
-  --
-  -- ClassicAPI's PortraitFrameTemplate declares that fill as `$parentBg` with NO parentKey
-  -- (Templates/UIPanelTemplates.xml), so `f.Bg` is NIL on 3.3.5a and any `if f.Bg` guard silently
-  -- no-ops — it has to be resolved by GLOBAL NAME. It is also the OLD stone
-  -- (!!!ClassicAPI\Texture\FrameGeneral\UI-Background-Rock) at BACKGROUND subLevel -6, so a body
-  -- texture below that draws behind it. Hence both halves of the fix: hide it by name, and sit
-  -- ABOVE -6 so we still win if anything re-shows it. Re-applied on OnShow for the same reason.
   local rockPath = (NE.tex and NE.tex.localFiles and NE.tex.localFiles[374155]) or 374155
-  local function templateBg()
-    if f.Bg and f.Bg ~= f._neBody then return f.Bg end
-    local n = f.GetName and f:GetName()
-    local t = n and _G[n .. "Bg"]
-    if t and t ~= f._neBody then return t end
-  end
   local function applyBody()
-    local old = templateBg()
-    if old and old.Hide then old:Hide() end
     local body = f._neBody
     if not body then
       body = f:CreateTexture(nil, "BACKGROUND", nil, -5)
@@ -178,12 +161,8 @@ local function buildChrome(f)
   f.NineSlice = ns
 
   local title = ADVENTURE_JOURNAL or "Adventure Guide"
-  -- Pass the template's TitleText explicitly: PC.SetTitle only auto-finds
-  -- frame.TitleContainer.TitleText / frame.Title, neither of which PortraitFrameTemplate has.
-  if NE.panelchrome and NE.panelchrome.SetTitle and f.TitleText then
-    NE.panelchrome.SetTitle(f, title, f.TitleText)
-  elseif f.TitleText and f.TitleText.SetText then
-    f.TitleText:SetText(title)
+  if NE.panelchrome and NE.panelchrome.EnsureTitle then
+    NE.panelchrome.EnsureTitle(f, title)
   end
 
   local close = CreateFrame("Button", "NE_EncounterJournalCloseButton", f, "UIPanelCloseButton")
@@ -541,7 +520,7 @@ end
 local frame
 local function build()
   if frame then return frame end
-  frame = CreateFrame("Frame", "NE_EncounterJournal", UIParent, "PortraitFrameTemplate")
+  frame = CreateFrame("Frame", "NE_EncounterJournal", UIParent)   -- DOWNPORT: no PortraitFrameTemplate on 3.3.5a
   -- The red 3-slice is the addon's standard button; Watch keeps this window's panel buttons
   -- skinned as its panes are built (core/ButtonSkin.lua). Opt out per button with _neNoSkin.
   if NE.buttonskin and NE.buttonskin.Watch then pcall(NE.buttonskin.Watch, frame) end

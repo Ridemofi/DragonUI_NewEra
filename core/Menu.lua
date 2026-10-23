@@ -9,12 +9,12 @@
 -- into UIDropDownMenu's init-callback idiom — which is both more code overall and a fresh chance to
 -- get the level plumbing wrong at every site.
 --
--- WHICH BACKEND. Prefer ClassicAPI's `C_UIDropDownMenu_*`. The native 3.3.5a one hard-caps at
--- C_UIDROPDOWNMENU_MAXLEVELS = 2, and the Cooldown Manager's ready-sound menu is three deep
--- (item -> Ready Sound -> category -> entry). ClassicAPI's copy grows the cap on demand inside
--- C_UIDropDownMenu_CreateFrames, which is exactly the constraint that decides this. The native
--- functions are kept as a fallback so the shim still works (two levels deep) if ClassicAPI is
--- absent; the two APIs are otherwise the same shape, differing only in the list-frame name prefix.
+-- WHICH BACKEND. Prefer `C_UIDropDownMenu_*` (ClassicAPI's copy, vendored in compat/). The native
+-- 3.3.5a one hard-caps at UIDROPDOWNMENU_MAXLEVELS = 2, and the Cooldown Manager's ready-sound menu
+-- is three deep (item -> Ready Sound -> category -> entry). The C_ copy grows the cap on demand
+-- inside C_UIDropDownMenu_CreateFrames, which is exactly the constraint that decides this. The
+-- native functions are kept as a fallback (two levels deep); the two APIs are otherwise the same
+-- shape, differing only in the list-frame name prefix.
 --
 -- THE TREE IS SEPARATE FROM THE RENDER. `NE.menu.BuildRoot` runs a generator and returns a plain
 -- node tree with no widget touched. That is what makes menu CONTENT testable offline: a test can
@@ -121,7 +121,7 @@ end
 
 -- ── backend ─────────────────────────────────────────────────────────────────────────────────────
 
-local B   -- resolved on first use; the globals do not exist until ClassicAPI has loaded
+local B   -- resolved on first use
 
 local function backend()
   if B ~= nil then return B or nil end

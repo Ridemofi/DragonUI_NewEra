@@ -5,7 +5,7 @@
 --   ClickAuctionSellItemButton()                          -- cursor item -> sell slot
 --   GetAuctionSellItemInfo() -> name, texture, count, quality, canUse, price   (6 values)
 --   GetAuctionDeposit(duration, minBid, buyoutPrice, stackSize, numStacks)     -- deposit cost
---   PostAuction(minBid, buyoutPrice, duration, stackSize, numStacks)           -- create the auction
+--   StartAuction(minBid, buyoutPrice, duration, stackSize, numStacks)          -- create the auction
 --   QueryAuctionItems(name, minLevel, maxLevel, invTypeIndex, classIndex, subClassIndex, page,
 --                      isUsable, quality, getAll)                             -- market search
 --                      `quality` is an EXACT match, not a minimum; -1 = any rarity (0 = Poor).
@@ -723,7 +723,7 @@ function AH.BuildSellPane(parent)
               and stack >= 1
               and stack <= (SF.currentCount or 0)
               and price > 0
-    createBtn:SetEnabled(ok and true or false)
+    NE.FrameUtil.SetEnabled(createBtn, ok)
   end
   pane.UpdatePostState = updatePostState
 
@@ -797,7 +797,7 @@ function AH.BuildSellPane(parent)
     local buyoutPrice = SF._buyout or 0
     if minBid <= 0 then return end
     local durationCode = DURATIONS[SF.durationIndex].code
-    local ok = pcall(PostAuction, minBid, buyoutPrice, durationCode, stack, 1)
+    local ok = pcall(StartAuction, minBid, buyoutPrice, durationCode, stack, 1)
     if ok then
       if PlaySound and SOUNDKIT and SOUNDKIT.LOOT_WINDOW_COIN_SOUND then
         PlaySound(SOUNDKIT.LOOT_WINDOW_COIN_SOUND)

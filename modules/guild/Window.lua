@@ -1202,22 +1202,22 @@ function G.SetDisplayMode(mode)
     local tab = f[d.key]
     if tab then
       local active = (d.mode == mode)
-      if tab._glow then tab._glow:SetShown(active) end
+      if tab._glow then NE.FrameUtil.SetShown(tab._glow, active) end
     end
   end
 
   -- The left GuildColumn is Roster-only (owner steer 2026-07-17) — it isn't one of the per-mode
   -- content panels swapped above, so toggle it separately.
-  if f.GuildColumn then f.GuildColumn:SetShown(mode == "ROSTER") end
+  if f.GuildColumn then NE.FrameUtil.SetShown(f.GuildColumn, mode == "ROSTER") end
 
   -- Bottom controls per mode. Chat no longer has its own mode (folded into GUILD_INFO), so Invite
   -- is just shown in both remaining modes now; Guild Control and the log button unchanged.
-  if f.InviteButton  then f.InviteButton:SetShown(mode == "ROSTER" or mode == "GUILD_INFO") end
-  if f.ControlButton then f.ControlButton:SetShown(mode == "ROSTER" or mode == "GUILD_INFO") end
+  if f.InviteButton  then NE.FrameUtil.SetShown(f.InviteButton, mode == "ROSTER" or mode == "GUILD_INFO") end
+  if f.ControlButton then NE.FrameUtil.SetShown(f.ControlButton, mode == "ROSTER" or mode == "GUILD_INFO") end
   -- Re-check leadership whenever the button comes back into view, in case the roster settled while a
   -- different tab was up and no event is due.
   if f.UpdateControlEnabled then f.UpdateControlEnabled() end
-  if f.LogButton     then f.LogButton:SetShown(mode == "GUILD_INFO") end
+  if f.LogButton     then NE.FrameUtil.SetShown(f.LogButton, mode == "GUILD_INFO") end
 
   if mode == "ROSTER" and G.RefreshRoster then G.RefreshRoster() end
   if mode == "GUILD_INFO" and G.RefreshInfo then G.RefreshInfo() end

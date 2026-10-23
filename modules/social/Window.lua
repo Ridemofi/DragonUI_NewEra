@@ -225,7 +225,7 @@ function SO.SetMode(mode)
   end
 
   for _, t in ipairs(TABS) do
-    if t.panel and f[t.panel] then f[t.panel]:SetShown(t.mode == mode) end
+    if t.panel and f[t.panel] then NE.FrameUtil.SetShown(f[t.panel], t.mode == mode) end
   end
   f._mode = mode
   local id = f._tabIds[mode]

@@ -248,6 +248,12 @@ local function buildChrome(f)
   end
   f.NineSlice = ns
 
+  -- Portrait: the cutout over the nineslice ring (filled with the NPC on open, below).
+  if not f.portrait then
+    f.portrait = ns:CreateTexture(nil, "ARTWORK")
+    if NE.portrait and NE.portrait.ApplyCutout then NE.portrait.ApplyCutout(f.portrait, f) end
+  end
+
   -- EnsureTitle, not SetTitle: this window builds its own chrome and never created a title
   -- FontString, and SetTitle silently returns when it can't find one -- which is why the title bar
   -- rendered empty. EnsureTitle makes the band + FontString (as f.Title), so the setTitleForMode
@@ -623,7 +629,7 @@ end
 local function createWindow()
   if AH.frame then return AH.frame end
 
-  local f = CreateFrame("Frame", FRAME_NAME, UIParent, "PortraitFrameTemplate")
+  local f = CreateFrame("Frame", FRAME_NAME, UIParent)   -- DOWNPORT: no PortraitFrameTemplate on 3.3.5a
   -- The red 3-slice is the addon's standard button; Watch keeps this window's panel buttons
   -- skinned as its panes are built (core/ButtonSkin.lua). Opt out per button with _neNoSkin.
   if NE.buttonskin and NE.buttonskin.Watch then pcall(NE.buttonskin.Watch, f) end

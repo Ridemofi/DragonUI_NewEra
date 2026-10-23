@@ -5,13 +5,12 @@
 --     for more than tidiness: an unfiltered UNIT_AURA delivers every raid/party/nameplate unit's
 --     aura churn to the handler, per plate per tick in big pulls.
 --
---     !!!ClassicAPI DOES implement the semantics (Util/EventHandler.lua:189) but only inside its
---     `Private` namespace — `Private.EventHandler` is never exported to _G, so we cannot delegate.
---     We therefore implement it ourselves on the Frame metatable: RegisterEvent + a per-frame,
---     per-event allowed-unit set, enforced by wrapping that frame's OnEvent handler.
+--     Implemented on the Frame metatable: RegisterEvent + a per-frame, per-event allowed-unit set,
+--     enforced by wrapping that frame's OnEvent handler.
 --
 --     Only the frames that actually call RegisterUnitEvent pay the wrapper cost — the metatable
---     gains the method, but the SetScript interception is installed per-instance, on demand.
+--     gains the (absent) method, but the SetScript / UnregisterEvent interception is installed
+--     per-instance, on demand. No stock metatable method is replaced.
 --
 -- (2) NE.EV_LEARNED_SPELL — NewEra's flavour-correct learn-a-spell event name.
 
@@ -57,10 +56,17 @@ if frameProto and not frameProto.RegisterUnitEvent then
     local existing = self:GetScript("OnEvent")
     if existing then rawSetScript(self, "OnEvent", filtering(existing)) end
 
-    -- Instance field shadows the metatable method for this frame only.
+    -- Instance fields shadow the metatable methods for this frame only.
     self.SetScript = function(s, script, handler)
       if script == "OnEvent" and handler then handler = filtering(handler) end
       return rawSetScript(s, script, handler)
+    end
+    -- Unregistering must drop the filter too, or a later plain RegisterEvent on the same event
+    -- would silently inherit the old unit restriction.
+    local rawUnregister = frameProto.UnregisterEvent
+    self.UnregisterEvent = function(s, event)
+      s._neUnitFilter[event] = nil
+      return rawUnregister(s, event)
     end
   end
 
@@ -83,13 +89,6 @@ if frameProto and not frameProto.RegisterUnitEvent then
     return self:RegisterEvent(event)
   end
 
-  -- Unregistering must drop the filter too, or a later plain RegisterEvent on the same event would
-  -- silently inherit the old unit restriction.
-  local rawUnregister = frameProto.UnregisterEvent
-  function frameProto.UnregisterEvent(self, event)
-    if self._neUnitFilter then self._neUnitFilter[event] = nil end
-    return rawUnregister(self, event)
-  end
 
   if NE.compat then NE.compat.unitEvents = true end
 end

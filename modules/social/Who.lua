@@ -294,7 +294,7 @@ function SO.RefreshWho()
       row.cells[3]:SetText(level or "")
       row.cells[4]:SetText(class or "")
       row.cells[1]:SetTextColor(classColor(classFile))
-      if row._sel then row._sel:SetShown(idx == panel._selected) end
+      if row._sel then NE.FrameUtil.SetShown(row._sel, idx == panel._selected) end
       row:Show()
     else
       row._index = nil

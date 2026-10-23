@@ -276,18 +276,18 @@ local function showMemberDetail(f, index)
 
   d.NoteEdit:SetText(note or "")
   local canEditNote = CanEditPublicNote and CanEditPublicNote()
-  d.NoteEdit:SetEnabled(canEditNote and true or false)
+  NE.FrameUtil.SetEnabled(d.NoteEdit, canEditNote)
 
   local canViewOfficer = CanViewOfficerNote and CanViewOfficerNote()
-  d.OfficerLabel:SetShown(canViewOfficer)
-  d.OfficerEdit:SetShown(canViewOfficer)
+  NE.FrameUtil.SetShown(d.OfficerLabel, canViewOfficer)
+  NE.FrameUtil.SetShown(d.OfficerEdit, canViewOfficer)
   if canViewOfficer then
     d.OfficerEdit:SetText(officernote or "")
-    d.OfficerEdit:SetEnabled(CanEditOfficerNote and CanEditOfficerNote() and true or false)
+    NE.FrameUtil.SetEnabled(d.OfficerEdit, CanEditOfficerNote and CanEditOfficerNote())
   end
 
-  d.Promote:SetShown(CanGuildPromote and CanGuildPromote() and true or false)
-  d.Demote:SetShown(CanGuildDemote and CanGuildDemote() and true or false)
+  NE.FrameUtil.SetShown(d.Promote, CanGuildPromote and CanGuildPromote() and true or false)
+  NE.FrameUtil.SetShown(d.Demote, CanGuildDemote and CanGuildDemote() and true or false)
 
   -- Grey out at the ends of the rank ladder, as the stock client does. rankIndex is 0-based with 0 =
   -- guild master, so:
@@ -302,7 +302,7 @@ local function showMemberDetail(f, index)
   end
   setArrowEnabled(d.Promote, rankIndex and rankIndex > 1)
   setArrowEnabled(d.Demote,  rankIndex and rankIndex > 0 and (numRanks <= 0 or rankIndex < numRanks - 1))
-  d.Remove:SetShown(CanGuildRemove and CanGuildRemove() and true or false)
+  NE.FrameUtil.SetShown(d.Remove, CanGuildRemove and CanGuildRemove() and true or false)
 
   -- Re-anchor the button row under whichever note box is actually the last one visible.
   d.Invite:ClearAllPoints()

@@ -322,10 +322,8 @@ local function buildPandemicRing(item)
       out:SetDuration(PANDEMIC_PULSE_HALF); out:SetOrder(1)
       local back = ag:CreateAnimation("Alpha")
       back:SetDuration(PANDEMIC_PULSE_HALF); back:SetOrder(2)
-      -- The native 3.3.5a Alpha animation takes a DELTA via SetChange; SetFromAlpha/SetToAlpha are
-      -- ClassicAPI's polyfill over it (WidgetAPI.lua:414-436), and it only emits the SetChange once
-      -- BOTH halves have been set — hence from-then-to, in that order, on each animation. The raw
-      -- SetChange branch below is the fallback for a client without ClassicAPI loaded.
+      -- The native 3.3.5a Alpha animation takes a DELTA via SetChange, which is the branch that runs
+      -- here; SetFromAlpha/SetToAlpha (from-then-to) is taken only where a client provides them.
       --
       -- Delta semantics are why startPandemic sets the frame's alpha to 1 before Play: the animation
       -- moves it by -0.55 from wherever it happens to be, not to an absolute 0.45.

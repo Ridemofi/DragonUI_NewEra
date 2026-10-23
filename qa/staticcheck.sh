@@ -5,7 +5,7 @@
 #   1. luac -p (Lua 5.1) every .lua under the addon, if luac exists.
 #   2. Verifies every file listed in DragonUI_NewEra.toc exists on disk.
 #   3. Greps the .lua for known 3.3.5a runtime traps and reports file:line:
-#        - SetShown(
+#        - :SetShown(  (method form; NE.FrameUtil.SetShown is the stand-in)
 #        - :SetMask(
 #        - ScrollBox
 #        - CreateFrame(... "FauxScrollFrameTemplate" ...) WITHOUT a name argument
@@ -135,7 +135,7 @@ trap_grep() {
     fi
 }
 
-trap_grep "SetShown("        'SetShown[[:space:]]*\('
+trap_grep ":SetShown("       ':SetShown[[:space:]]*\('
 trap_grep ":SetMask("        ':SetMask[[:space:]]*\('
 trap_grep "ScrollBox"        'ScrollBox'
 

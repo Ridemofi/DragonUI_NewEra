@@ -4,8 +4,8 @@
 in-progress output. The architect owns this file and the TOC; agents own their directories.
 
 Paths: addon = `/root/downport/DragonUI_NewEra/`. Downport SOURCE = `/root/downport/DOWNPORT THIS/NewEra/`
-(Classic 1.15). Base HUD = `/root/downport/DragonUI/DragonUI/` (3.3.5a). Shim lib =
-`/root/downport/classicapi/!!!ClassicAPI/`.
+(Classic 1.15). Base HUD = `/root/downport/DragonUI/DragonUI/` (3.3.5a). Reference shim lib (NOT a
+dependency; read-only source for vendoring) = `/root/downport/classicapi/!!!ClassicAPI/`.
 
 ---
 
@@ -29,31 +29,21 @@ Paths: addon = `/root/downport/DragonUI_NewEra/`. Downport SOURCE = `/root/downp
 ## 1. compat/ — modern-API shim layer  (owner: API Bridge Engineer)
 
 Goal: after `compat/` loads, every modern symbol NewEra v1 uses **exists and works on 3.3.5a**,
-delegating to `!!!ClassicAPI` when present, else a vendored shim copied/adapted from ClassicAPI
-or written fresh. Load order is fixed by the TOC (compat loads before core).
+as a shim written fresh or, where non-trivial, adapted from ClassicAPI (GPL-3.0; keep a one-line
+attribution). No external shim addon is loaded. Load order is fixed by the TOC (compat loads before core).
 
-**Files you own (exact names — TOC already lists them):**
-`compat/Compat.lua` (loader + ClassicAPI detection + `NE.compat` table of capability bools),
-`compat/Mixin.lua`, `compat/C_Timer.lua`, `compat/C_Texture.lua`, `compat/C_Container.lua`,
-`compat/C_Item.lua`, `compat/C_Spell.lua`, `compat/C_Map.lua`. Plus **`compat/COVERAGE.md`**.
+**Files you own:** everything under `compat/` (TOC order: `Pools.lua` before `Libs\`, then
+`Compat.lua`, `C_Timer.lua`, `Events.lua`, `C_Container.lua`, `C_Item.lua`, `MapDebugObjects.lua`,
+`SpellBook.lua`, `C_UIDropDownMenu.xml`, `Locale.lua`), plus **`compat/COVERAGE.md`**, which lists
+every modern symbol NewEra calls and what provides it. Ship only what a call site actually uses.
 
-**Contract each shim guarantees (minimum for v1):**
-- `Mixin(obj, ...)`, `CreateFromMixins(...)`, `CreateAndInitFromMixin(...)`.
-- `C_Timer.After(sec, fn)`, `C_Timer.NewTimer`, `C_Timer.NewTicker`.
-- `C_Texture.GetAtlasInfo(name)`, `C_Texture.GetAtlasExists`. (Atlas DATA is registered by Asset
-  agent via `NE.tex`; this shim only needs to answer atlas queries NewEra makes directly.)
-- `C_Container.*` (GetContainerNumSlots/ItemInfo/ItemLink/NumFreeSlots/UseContainerItem/
-  PickupContainerItem) mapped to 3.3.5 `GetContainer*` globals.
-- `C_Item.*` subset used by v1 (GetItemInfo wrappers, GetItemSpell, icon/quality helpers).
-- `C_Spell.*` subset (GetSpellSubtext, GetSpellPowerCost, texture/cooldown helpers).
-- `C_Map.*` subset (GetBestMapForUnit, GetMapInfo, GetPlayerMapPosition) — best-effort; QuestFrame
-  uses some. Stub returning safe nils where 3.3.5 can't answer, and record it in COVERAGE.md.
-
-**Rule:** prefer DragonUI's own helper if it already exists; else ClassicAPI; else vendor a copy
-INTO compat/ (don't hard-depend on ClassicAPI). Detection: `if NE.hasClassicAPI and C_Timer then …`.
+**Rule:** prefer DragonUI's own helper if it already exists; else the native 3.3.5a API; else a
+minimal shim INTO compat/ (vendored from ClassicAPI only when non-trivial). Never depend on the
+ClassicAPI addon, and never replace a stock global or widget method — define only what is absent;
+missing widget methods go through `NE.FrameUtil` helpers, not the shared metatables.
 
 **Deliverable `compat/COVERAGE.md`:** a matrix of every modern symbol NewEra v1 references →
-`{source: ClassicAPI | DragonUI | vendored | stub | not-needed-v1}` + a note on any partial/stub.
+`{source: compat | vendored | DragonUI | native | guarded | stub | not-needed-v1}` + a note on any partial/stub.
 Produce the symbol list by grepping the v1 module dirs in the NewEra source (CharacterPanel,
 Spellbook, Talents, QuestFrame, MerchantFrame, MailFrame) AND the Core/ files those depend on.
 
@@ -111,7 +101,7 @@ art that's missing/needs extraction for later panels. Confirm one atlas renders 
 Core agent's Hello demo (coords correct, not stretched).
 
 **Coordinate with Core (§2) on the atlas mechanism:** decide together whether atlas coords are
-resolved via `C_Texture.RegisterAtlas` (ClassicAPI/shim) or a plain `NE.tex` coord table. Record
+resolved via `C_Texture.RegisterAtlas` or a plain `NE.tex` coord table (decided: `NE.tex`). Record
 the decision at the top of `Textures/Assets.lua`.
 
 ---

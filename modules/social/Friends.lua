@@ -215,8 +215,8 @@ function SO.SetFriendsSubTab(key)
   for _, tab in ipairs(panel._subTabs) do
     setTabArt(tab, tab._key == key)
   end
-  if panel.FriendsView then panel.FriendsView:SetShown(key == "FRIENDS") end
-  if panel.IgnoreView  then panel.IgnoreView:SetShown(key == "IGNORE") end
+  if panel.FriendsView then NE.FrameUtil.SetShown(panel.FriendsView, key == "FRIENDS") end
+  if panel.IgnoreView  then NE.FrameUtil.SetShown(panel.IgnoreView, key == "IGNORE") end
   if key == "FRIENDS" then
     if ShowFriends then ShowFriends() end
     SO.RefreshFriends()
@@ -475,7 +475,7 @@ function SO.RefreshFriends()
         row.info:SetText((FRIENDS_LIST_OFFLINE or "Offline") .. noteSuffix)
         row.info:SetTextColor(0.4, 0.4, 0.4)
       end
-      if row._sel then row._sel:SetShown(idx == view._selected) end
+      if row._sel then NE.FrameUtil.SetShown(row._sel, idx == view._selected) end
       row:Show()
     else
       row._index = nil
@@ -583,7 +583,7 @@ function SO.RefreshIgnore()
       row._index = idx
       row.name:SetText((GetIgnoreName and GetIgnoreName(idx)) or "")
       row.name:SetTextColor(1, 0.82, 0)
-      if row._sel then row._sel:SetShown(idx == view._selected) end
+      if row._sel then NE.FrameUtil.SetShown(row._sel, idx == view._selected) end
       row:Show()
     else
       row._index = nil

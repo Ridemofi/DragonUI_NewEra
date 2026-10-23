@@ -1,15 +1,21 @@
--- compat/SpellBook.lua — Cataclysm-era spellbook API shims !!!ClassicAPI does NOT cover.
+-- compat/SpellBook.lua — Cataclysm-era spellbook API shims.
 --
 -- The retail/Classic GetSpellBookItem* family (and GameTooltip:SetSpellBookItem) was added in
 -- Cataclysm (4.0). NewEra (Classic Era 1.15, rebased on a modern client) uses them; real 3.3.5a
 -- (WotLK) does NOT — it has the older INDEX+bookType API (GetSpellName / GetSpellTexture /
 -- GetSpellLink / PickupSpell / GameTooltip:SetSpell).
 --
--- !!!ClassicAPI is a HARD dependency and loads first; its C_SpellBook already aliases the GLOBALS
--- GetSpellBookItemName (-> GetSpellName) and PickupSpellBookItem (-> PickupSpell). It does NOT
--- provide GetSpellBookItemTexture, GetSpellBookItemInfo, or GameTooltip:SetSpellBookItem, so we map
--- those three onto the 3.3.5a functions. Each is defined ONLY when absent, so this is a no-op on a
--- client that already provides them.
+-- Each is defined ONLY when absent, so this is a no-op on a client that already provides them.
+
+-- GetSpellBookItemName(slot, bookType) -> name, rank  (3.3.5a GetSpellName)
+if not _G.GetSpellBookItemName and _G.GetSpellName then
+  GetSpellBookItemName = GetSpellName
+end
+
+-- PickupSpellBookItem(slot, bookType)  (3.3.5a PickupSpell takes the same slot + bookType)
+if not _G.PickupSpellBookItem and _G.PickupSpell then
+  PickupSpellBookItem = PickupSpell
+end
 
 -- GetSpellBookItemTexture(slot, bookType) -> texture path
 if not _G.GetSpellBookItemTexture and _G.GetSpellTexture then

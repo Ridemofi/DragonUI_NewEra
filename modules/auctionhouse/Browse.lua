@@ -332,7 +332,7 @@ local function buildCategoryList(parent)
       row.Line:Show()
     end
 
-    row.SelectedTexture:SetShown(info.selected and true or false)
+    NE.FrameUtil.SetShown(row.SelectedTexture, info.selected and true or false)
     row.HighlightTexture:Hide()
   end
 
@@ -730,7 +730,7 @@ function AH.BuildBrowsePane(parent)
   rarityRow(-229, 4, NE.itembtn and NE.itembtn.WrapTextByQuality(_G.ITEM_QUALITY4_DESC or "Epic", 4) or (_G.ITEM_QUALITY4_DESC or "Epic"))
   setRarity(ANY_QUALITY)
 
-  filterButton:SetScript("OnClick", function() filterPanel:SetShown(not filterPanel:IsShown()) end)
+  filterButton:SetScript("OnClick", function() NE.FrameUtil.SetShown(filterPanel, not filterPanel:IsShown()) end)
 
   -- Click-outside-to-close: a fullscreen catcher one frame level under the panel, same strata so
   -- it still sits above the rest of the window and intercepts the outside click.
@@ -2057,8 +2057,8 @@ function AH.BuildBrowsePane(parent)
     local r = detailSelected
     local canBuyout = r and r.buyout and r.buyout > 0
     local canBid = r and r.nextBid and r.nextBid > 0
-    detailBuyoutBtn:SetEnabled(canBuyout and true or false)
-    detailBidBtn:SetEnabled(canBid and true or false)
+    NE.FrameUtil.SetEnabled(detailBuyoutBtn, canBuyout)
+    NE.FrameUtil.SetEnabled(detailBidBtn, canBid)
   end
 
   local function ensureDetailRow(i)
@@ -2189,7 +2189,7 @@ function AH.BuildBrowsePane(parent)
       end
       detailSelected = self._data
       for _, rr in ipairs(detailRowWidgets) do
-        if rr.Sel then rr.Sel:SetShown(rr._data ~= nil and rr._data == detailSelected) end
+        if rr.Sel then NE.FrameUtil.SetShown(rr.Sel, rr._data ~= nil and rr._data == detailSelected) end
       end
       updateDetailActions()
     end)
@@ -2377,7 +2377,7 @@ function AH.BuildBrowsePane(parent)
         end
         row.Seller:SetText(sellerText(data))
         row.Time:SetText(data.timeText or "")
-        if row.Sel then row.Sel:SetShown(data == detailSelected) end
+        if row.Sel then NE.FrameUtil.SetShown(row.Sel, data == detailSelected) end
         row:Show()
       else
         row._data = nil

@@ -68,7 +68,7 @@ local function buildWell(parent, name, labelText, anchorTop, height, commitFn, c
   -- depends on. Guarded on enabled state so a read-only well still refuses focus.
   scroll:EnableMouse(true)
   scroll:SetScript("OnMouseDown", function()
-    if edit.IsEnabled and not edit:IsEnabled() then return end
+    if not edit:IsMouseEnabled() then return end   -- NE.FrameUtil.SetEnabled(edit, false) drops the mouse
     edit:SetFocus()
   end)
 
@@ -102,23 +102,17 @@ end
 
 -- Apply edit permission to a well, but ONLY on an actual change of state.
 --
--- EditBox:SetEnabled is a ClassicAPI shim (!!!ClassicAPI/Util/WidgetAPI.lua) and its Enable() path
--- ends in ClearFocus(). RefreshInfo runs on every GUILD_ROSTER_UPDATE — and this window requests a
--- fresh roster whenever it opens — so re-applying "enabled" unconditionally tore the cursor out of
--- the box mid-sentence and the well read as uneditable. Guarding on change means Enable() fires once,
--- before anyone is typing, instead of on every roster tick.
---
--- Enable() also swaps the font object to GameFontWhite, so the well's own font has to be re-applied
--- after it or the text silently changes size.
+-- RefreshInfo runs on every GUILD_ROSTER_UPDATE — and this window requests a fresh roster whenever
+-- it opens — so re-applying the state unconditionally once tore the cursor out of the box
+-- mid-sentence. Guarding on change applies it once, before anyone is typing. The well's own font and
+-- colour are re-applied after it (NE.FrameUtil.SetEnabled greys a disabled EditBox's text).
 local function applyEditable(well, canEdit)
   local want = canEdit and true or false
   if well._editable == want then return end
   well._editable = want
 
   local edit = well.edit
-  if edit.SetEnabled then edit:SetEnabled(want)
-  elseif want then edit:Enable()
-  else edit:Disable() end
+  NE.FrameUtil.SetEnabled(edit, want)
 
   edit:SetFontObject("GameFontHighlightSmall")
   edit:SetTextColor(1, 1, 1)

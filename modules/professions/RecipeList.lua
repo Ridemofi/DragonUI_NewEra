@@ -411,7 +411,7 @@ local function initRecipeRow(btn, entry, rl)
     NE.tex.SetAtlas(btn.SkillUps.Icon, atlas, true)
     local n, showTxt = r.numSkillUps or 0, false
     showTxt = (n > 1) and (r.difficulty == "optimal")
-    btn.SkillUps.Text:SetShown(showTxt or false)
+    NE.FrameUtil.SetShown(btn.SkillUps.Text, showTxt or false)
     if showTxt then btn.SkillUps.Text:SetText(n) end
     btn.SkillUps:Show()
   else
@@ -424,7 +424,7 @@ local function initRecipeRow(btn, entry, rl)
   else btn.Count:Hide() end
 
   -- Selection highlight.
-  btn.Sel:SetShown(C._selectedKey ~= nil and C._selectedKey == r.name)
+  NE.FrameUtil.SetShown(btn.Sel, C._selectedKey ~= nil and C._selectedKey == r.name)
 
   btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   btn:SetScript("OnClick", function(self, btnName)
@@ -474,7 +474,7 @@ local function initRecipeRow(btn, entry, rl)
     if rl and rl._rowPool then
       for _, row in ipairs(rl._rowPool) do
         if row.Sel and row._recipe then
-          row.Sel:SetShown(row._recipe.name == r.name)
+          NE.FrameUtil.SetShown(row.Sel, row._recipe.name == r.name)
         end
       end
     end
@@ -581,7 +581,7 @@ local function refreshRows(rl)
 
   if rl.BottomFade then
     local hasMoreBelow = (offset + visibleRows) < total
-    rl.BottomFade:SetShown(hasMoreBelow)
+    NE.FrameUtil.SetShown(rl.BottomFade, hasMoreBelow)
   end
 end
 

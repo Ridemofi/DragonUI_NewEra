@@ -3,12 +3,16 @@
 ## Notes: Dragonflight-style panels for 3.3.5a — downport of NewEra (Classic 1.15) onto DragonUI.
 ## Author: DragonUI_NewEra team
 ## Version: 0.1.0
-## Dependencies: DragonUI, !!!ClassicAPI
+## Dependencies: DragonUI
 ## OptionalDeps: DragonUI_Options
 ## SavedVariables: DragonUI_NewEraDB
 ## SavedVariablesPerCharacter: NE_ProfessionsCacheDB
 
 bootstrap.lua
+
+# Pools = CreateFramePool/CreateTexturePool, which the embedded LibCustomGlow calls at file load,
+# so it precedes the libs block. Self-contained (needs nothing from NE).
+compat\Pools.lua
 
 # --- libs: embedded so features don't depend on other addons being loaded ---
 # LibCustomGlow provides the WeakAuras-style "Action Button Glow" (ants) used for the spellbook's
@@ -16,24 +20,24 @@ bootstrap.lua
 Libs\LibStub\LibStub.lua
 Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.xml
 
-# --- compat: thin bridge over the REQUIRED !!!ClassicAPI (owner: API Bridge Engineer) ---
-# !!!ClassicAPI is a hard dependency and loads first (via its !!! prefix + Dependencies), so it
-# owns the modern globals (C_Timer/C_Texture/C_Container/C_Item/C_Spell/C_SpellBook/C_Map/Mixin/…).
-# These files now only fill the handful of symbols ClassicAPI does NOT provide; C_Timer/C_Texture
-# are fully ClassicAPI-owned and no longer shipped here. See compat/COVERAGE.md.
+# --- compat: modern-API shims for 3.3.5a (owner: API Bridge Engineer) ---
+# Self-contained: no external shim addon. Every file defines a symbol only when it is absent and
+# never replaces a stock global or widget method. See compat/COVERAGE.md for symbol -> provider.
 compat\Compat.lua
-# Events.lua adds Frame:RegisterUnitEvent (a 5.0 API; ClassicAPI implements the semantics but only
-# inside its private namespace) plus NE.EV_LEARNED_SPELL. Must follow Compat.lua for NE.compat.
+compat\C_Timer.lua
+# Events.lua adds Frame:RegisterUnitEvent (a 5.0 API) plus NE.EV_LEARNED_SPELL. Must follow
+# Compat.lua for NE.compat.
 compat\Events.lua
 compat\C_Container.lua
 compat\C_Item.lua
-compat\C_Spell.lua
-compat\C_Map.lua
 # Not a missing symbol but a broken one: a client whose GetNumMapDebugObjects reports more
 # objects than GetMapDebugObjectInfo can describe makes stock WorldMapFrame_Update throw on
 # every map update. Guards the pair without suppressing a client that implements it properly.
 compat\MapDebugObjects.lua
 compat\SpellBook.lua
+# C_UIDropDownMenu = ClassicAPI's grow-on-demand dropdown (vendored, GPL-3.0); core/Menu.lua's
+# backend for menus deeper than two levels.
+compat\C_UIDropDownMenu.xml
 
 compat\Locale.lua
 Locales\Load_Locales.xml
@@ -51,8 +55,7 @@ core\NineSliceLayouts.lua
 core\PanelChrome.lua
 core\Portrait.lua
 core\Tabs.lua
-# Menu = a MenuUtil-shaped context-menu builder over UIDropDownMenu. Resolves its backend lazily,
-# so it does not care where ClassicAPI sits in the load order.
+# Menu = a MenuUtil-shaped context-menu builder over (C_)UIDropDownMenu. Resolves its backend lazily.
 core\Menu.lua
 # NavBar = retail's breadcrumb bar, ONCE. It was rebuilt from scratch more than once on this
 # client, and the later copy re-introduced two faults the first had already fixed (Home sitting on

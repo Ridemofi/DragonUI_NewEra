@@ -27,9 +27,6 @@ if not NE.dragon then
     return
 end
 
--- Optional shim library. compat/ refines this and degrades gracefully if absent.
-NE.hasClassicAPI = _G["!!!ClassicAPI"] ~= nil
-
 -- Stable per-character key for per-char data inside the account-wide DB
 -- (equipment sets, talent prefs). Mirrors NewEra's NE.CharKey(). Only valid
 -- after PLAYER_LOGIN.

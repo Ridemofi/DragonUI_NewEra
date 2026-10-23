@@ -379,8 +379,7 @@ function SO.RefreshSavedInstances()
         row.Name:SetTextColor(1, 1, 1)
         row.Reset:SetTextColor(0.8, 0.8, 0.8)
       end
-      -- Explicit Show/Hide rather than the retail one-call setter, which qa/staticcheck flags as a
-      -- 3.3.5a trap (it only works here at all because ClassicAPI shims it onto every region).
+      -- Explicit Show/Hide: the retail one-call setter does not exist on 3.3.5a.
       if frame._selected == e.index then row.Sel:Show() else row.Sel:Hide() end
       row:Show()
     else

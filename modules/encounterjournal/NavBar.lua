@@ -104,29 +104,16 @@ function NE.ej.BuildNavBar(f)
   navBar:SetPoint("TOPLEFT", f, "TOPLEFT", NAVBAR_X, NAVBAR_Y)
   f._neNavBar = navBar
 
-  -- Search box (filters the instance grid). pcall the ClassicAPI template and fall back to a plain
-  -- InputBoxTemplate if a future build renames it — the journal works without search.
-  local ok, sb = pcall(CreateFrame, "EditBox", "NE_EncounterJournalSearchBox", f, "SearchBoxTemplate")
-  if not (ok and sb) then
-    ok, sb = pcall(CreateFrame, "EditBox", "NE_EncounterJournalSearchBox", f, "InputBoxTemplate")
-    if ok and sb then sb:SetAutoFocus(false) end
-  end
-  if ok and sb then
-    sb:SetSize(180, 20)
-    sb:SetPoint("TOPRIGHT", f, "TOPRIGHT", -30, -32)
-    sb:SetFrameLevel(lvl)
-    -- DOWNPORT: SearchBoxTemplate_OnLoad/OnEditFocusLost (!!!ClassicAPI) write the literal SEARCH
-    -- placeholder into the box's real text (no retail overlay watermark), so OnTextChanged fires
-    -- with that placeholder both on load and on every blur — NE.ej.ReadSearchText treats it as
-    -- "no search" instead of a literal filter string that matches zero instances.
-    sb:HookScript("OnTextChanged", function(self)
-      if NE.ej.FilterGrid then
-        NE.ej.FilterGrid(NE.ej.ReadSearchText and NE.ej.ReadSearchText(self) or self:GetText())
-      end
-    end)
-    sb:HookScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    f._neSearchBox = sb
-  end
+  -- Search box (filters the instance grid).
+  local sb = NE.FrameUtil.SearchBox(f, "NE_EncounterJournalSearchBox", 180, 20)
+  sb:SetPoint("TOPRIGHT", f, "TOPRIGHT", -30, -32)
+  sb:SetFrameLevel(lvl)
+  sb:HookScript("OnTextChanged", function(self)
+    if NE.ej.FilterGrid then
+      NE.ej.FilterGrid(NE.ej.ReadSearchText and NE.ej.ReadSearchText(self) or self:GetText())
+    end
+  end)
+  f._neSearchBox = sb
 
   navBar:Relayout()
   return navBar

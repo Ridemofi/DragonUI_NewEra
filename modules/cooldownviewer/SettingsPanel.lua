@@ -65,7 +65,13 @@ local currentMode  -- "spells" | "auras" | "settings"
 local function build()
   if panel then return panel end
 
-  local f = CreateFrame("Frame", PANEL_NAME, UIParent, "ButtonFrameTemplate")
+  -- DOWNPORT: a bare frame — 3.3.5a has no ButtonFrameTemplate. PanelChrome builds the body, border,
+  -- title and close button; the two template children this file used (Inset, portrait) are made here.
+  local f = CreateFrame("Frame", PANEL_NAME, UIParent)
+  f.Inset = CreateFrame("Frame", nil, f)
+  f.Inset:SetPoint("TOPLEFT", f, "TOPLEFT", 4, -60)
+  f.Inset:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, 26)
+  f.portrait = f:CreateTexture(nil, "ARTWORK")
   -- The red 3-slice is the addon's standard button; Watch keeps this window's panel buttons
   -- skinned as its panes are built (core/ButtonSkin.lua). Opt out per button with _neNoSkin.
   if NE.buttonskin and NE.buttonskin.Watch then pcall(NE.buttonskin.Watch, f) end
@@ -156,15 +162,11 @@ local function build()
   -- the body stone and was never once visible — the window looked like whatever f.Bg was tinted to,
   -- and the fill might as well not have existed. It has to sit ABOVE f.Bg.
   --
-  -- (ClassicAPI's PortraitFrameTemplate declares its own $parentBg with NO parentKey, so PanelChrome
-  -- builds f.Bg fresh at the default subLevel instead of re-texturing the template's at -6. That is
-  -- what put the two on the wrong sides of each other.)
   if f.Inset then
     -- Lift the Inset's bottom edge to make the button strip FOOTER_H tall. Only the BOTTOMRIGHT
     -- point is re-set: SetPoint replaces an existing anchor of the same name, so the template's
     -- TOPLEFT stays exactly where it was and this cannot drift from it.
     f.Inset:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6, FOOTER_H)
-    if f.Inset.Bg then f.Inset.Bg:Hide() end   -- the template's own old-ClassicAPI marble
     local ibg = f:CreateTexture(nil, "BACKGROUND", nil, 1)
     ibg:SetPoint("TOPLEFT",     f.Inset, "TOPLEFT",     0, 0)
     ibg:SetPoint("BOTTOMRIGHT", f.Inset, "BOTTOMRIGHT", 0, 0)
@@ -245,10 +247,8 @@ local function build()
 
   -- Search box. Filtering DIMS non-matching items in place rather than reflowing the grid, which is
   -- what retail does; Categories.lua owns the per-item overlay in 4b-2.
-  f.search = CreateFrame("EditBox", PANEL_NAME .. "Search", f, "SearchBoxTemplate")
-  f.search:SetSize(290, 30)
+  f.search = NE.FrameUtil.SearchBox(f, PANEL_NAME .. "Search", 290, 30)
   f.search:SetPoint("TOPLEFT", 72, -30)
-  f.search:SetAutoFocus(false)
   f.search:HookScript("OnTextChanged", function()
     if CDS.ApplyItemFilter then CDS.ApplyItemFilter(CDS.GetSearchText()) end
   end)
@@ -443,10 +443,9 @@ function CDS.RefreshRevertState()
 end
 
 -- ── Search text ─────────────────────────────────────────────────────────────────────────────────
--- ClassicAPI's SearchBoxTemplate has NO Instructions FontString: its placeholder IS the edit box's
--- text (SearchBoxTemplate_OnLoad calls SetText(SEARCH), and OnEditFocusLost puts it back). So an
--- untouched search box reads back "Search", and handing that to the filter dimmed every tile in the
--- panel to 25% — which is what "all the icons are greyed out" turned out to be. Every read of the
+-- The box is NE.FrameUtil.SearchBox (placeholder in its own FontString), so empty reads "". The
+-- literal "Search" is still treated as empty: an old-style SearchBoxTemplate put its placeholder IN
+-- the text, and handing that to the filter dimmed every tile in the panel to 25%. Every read of the
 -- box goes through here.
 function CDS.GetSearchText()
   if not (panel and panel.search) then return "" end

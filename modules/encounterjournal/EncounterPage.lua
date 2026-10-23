@@ -1379,7 +1379,7 @@ function NE.ej.NormalizeModel(ma, displayID, tier)
       -- load on its own — tell the player instead of leaving the pane blank.
       if ma.unavailable then
         local loaded = model.GetModel and model:GetModel()
-        ma.unavailable:SetShown(not (loaded and loaded ~= ""))
+        NE.FrameUtil.SetShown(ma.unavailable, not (loaded and loaded ~= ""))
       end
     end)
   end

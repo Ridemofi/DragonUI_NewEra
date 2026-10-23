@@ -1,103 +1,80 @@
 # compat/ — Modern-API Coverage Matrix
 
-`!!!ClassicAPI` is now a **HARD dependency** (`## Dependencies: DragonUI, !!!ClassicAPI`). Because of
-its `!!!` name prefix **and** the dependency ordering, ClassicAPI's files run **before** any
-`compat/` file. ClassicAPI therefore **owns** the modern C_* namespaces; `compat/` no longer vendors
-fallbacks for anything ClassicAPI provides — it ships **only** the handful of symbols ClassicAPI does
-not define.
+NewEra has **no external shim dependency** (`## Dependencies: DragonUI`). `!!!ClassicAPI` was a hard
+dependency until 2026-10-24 and was dropped: it hard-froze the client at a quest-ender NPC's reward
+window, and it rewrites stock widget methods on every frame type. Everything modern NewEra calls is
+now provided by `compat/`, by DragonUI, or natively by 3.3.5a.
 
-Each surviving `compat/` file still uses the `C_X = C_X or {}; if not C_X.Fn then C_X.Fn = … end`
-guard, so a real ClassicAPI impl is never clobbered; with ClassicAPI loaded first these guards are
-simply already satisfied for the symbols it owns.
+**Rules for compat/**
+- Define a symbol only when it is absent (`C_X = C_X or {}; if not C_X.Fn then … end`).
+- Never replace a stock global or a stock widget method. Widget methods that are missing on this
+  client (`SetShown`, `SetEnabled`, …) are reached through `NE.FrameUtil` helpers, not added to the
+  shared metatables. The one metatable addition is `Frame:RegisterUnitEvent` (absent, 5.0 API).
+- Vendor only what is used. Code adapted from ClassicAPI (GPL-3.0, by Tsoukie) carries a one-line
+  attribution at the top of the file.
 
-**Source legend**
-- `ClassicAPI` — provided by `!!!ClassicAPI` (loads first). **No compat/ shim shipped.**
-- `compat` — `compat/` defines it because ClassicAPI does NOT.
-- `stub` — `compat/` defines it but it CANNOT answer correctly on 3.3.5a (and ClassicAPI does not
-  emulate it); returns a safe value. Recorded at runtime in `NE.compat.stubs`.
-- `DragonUI` / `global` — satisfied by base DragonUI or a native 3.3.5a global.
-
----
-
-## Owned by ClassicAPI — compat/ ships NOTHING
-
-| Namespace / symbol | Where ClassicAPI defines it |
-|---|---|
-| `C_Timer.After` / `NewTimer` / `NewTicker` | `Util/C_Timer.lua` (AnimationGroup pool). **`compat/C_Timer.lua` deleted.** |
-| `C_Texture.GetAtlasInfo` / `GetAtlasExists` / `RegisterAtlas` / `RegisterAtlasTable` / `AtlasData` | `Util/C_Texture.lua` (full atlas registry, identical return shape). **`compat/C_Texture.lua` deleted.** |
-| `Mixin` / `CreateFromMixins` / `CreateAndInitFromMixin` | `Util/Mixin.lua`. ClassicAPI defines all three (see note below re: `compat/Mixin.lua`). |
-| `C_Container.GetContainerItemInfo` (TABLE) / `GetContainerItemID` / `GetContainerItemLink` / `GetContainerNumSlots` / `GetContainerNumFreeSlots` / `UseContainerItem` / `PickupContainerItem` | `Util/C_Container.lua` |
-| `C_Item.GetItemInfo` / `GetItemInfoInstant` / `GetItemIconByID` / `GetItemCount` / ItemLocation family | `Util/C_Item.lua` |
-| `C_Spell.GetSpellInfo` / `GetSpellName` / `GetSpellSubtext` / `GetSpellTexture` / `GetSpellCooldown` / `GetSpellDescription` / `GetSpellLink` | `Util/C_Spell.lua` |
-| `C_SpellBook.GetSpellBookItemName` (+ global) / `PickupSpellBookItem` (+ global) / `GetSpellLinkFromSpellID` / `HasPetSpells` | `Util/C_SpellBook.lua` |
-| `C_Map.GetBestMapForUnit` / `IsWorldMap` / `WorldMap` | `Util/C_Map.lua` |
-| `C_NewItems.*` | `Util/C_NewItems.lua` |
-| `GetItemInfoInstant`, `GetPhysicalScreenSize`, `SearchBoxTemplate` (XML) | `Util/C_Item.lua`, `Util/PixelUtil.lua`, `Templates/UIPanelTemplates.*` |
-| `C_UIDropDownMenu_Initialize` / `_AddButton` / `_CreateInfo` / `C_UIDropDownMenuTemplate` | `Templates/C_UIDropDownMenu.{lua,xml}`, reached via `Load.xml` → `Templates/Load.xml`. Note for any menu deeper than two levels: this grows `C_UIDROPDOWNMENU_MAXLEVELS` on demand (`:124-130`), which the 3.3.5a global does not. **Consumer: `core/Menu.lua`** — it prefers these over the native `UIDropDownMenu_*` for exactly that reason (the Cooldown Manager's ready-sound menu is three levels), and falls back to the native two-level API if ClassicAPI is ever absent. |
-
-`C_GetContainerItemInfo` table fields ClassicAPI returns
-(`iconFileID/stackCount/isLocked/quality/isReadable/hasLoot/hyperlink/isFiltered/hasNoValue/itemID/isBound`)
-**match** the fields v1 reads (`.iconFileID/.stackCount/.isLocked/.quality/.hyperlink/.itemID`). No adapter needed.
+**Source legend** — `compat` (written here) · `vendored` (adapted from ClassicAPI) · `stub` (cannot
+answer on 3.3.5a; safe value, recorded in `NE.compat.stubs`) · `NE` (an `NE.*` helper replaces the
+call) · `native` (3.3.5a global) · `guarded` (call site checks for it and falls back; nothing ships).
 
 ---
 
-## Shipped by compat/ — symbols ClassicAPI does NOT provide
+## Globals and namespaces
 
-| Symbol | Source | compat file | Notes |
+| Symbol | Source | Where | Notes |
 |---|---|---|---|
-| `Mixin` / `CreateFromMixins` / `CreateAndInitFromMixin` | compat (redundant — see note) | `Mixin.lua` | Retained pending review; ClassicAPI's `Util/Mixin.lua` already defines these and loads first, so the bodies here are dead at runtime. |
-| `C_Container.GetContainerItemCooldown` | compat | `C_Container.lua` | Forward to 3.3.5 global. ClassicAPI marks this INCOMPLETE (it ships `GetItemCooldown`, not the container variant). Used by `core/ItemGrid.lua` (cooldown swipe). |
-| `C_Container.GetContainerItemQuestInfo` | compat (partial) | `C_Container.lua` | Positional → table `{isQuestItem,questID/questId,isActive}`. ClassicAPI marks this INCOMPLETE. Used by `core/ItemGrid.lua` (quest-item border). If the 3.3.5 global is absent, returns empty — **partial**, recorded. |
-| `C_Item.GetItemSpell` | compat | `C_Item.lua` | Forward to 3.3.5 global. ClassicAPI's `C_Item` has no `GetItemSpell`. Used by `core/ItemGrid.lua`. |
-| `C_Item.GetItemQualityColor` | compat | `C_Item.lua` | Forward, or fallback to `ITEM_QUALITY_COLORS`. ClassicAPI's `C_Item` has no `GetItemQualityColor`. |
-| `C_Spell.GetSpellPowerCost` | **stub** | `C_Spell.lua` | 3.3.5 has no per-spell power-cost API and ClassicAPI does not emulate one → returns `{}`. Source does `… or {}` then `pairs()`, so the cost overlay shows nothing. Recorded. |
-| `C_Map.GetMapInfo` | **stub** | `C_Map.lua` | No uiMapID→metadata on 3.3.5; ClassicAPI doesn't define it. Returns nil. Recorded. v1 never calls C_Map. |
-| `C_Map.GetPlayerMapPosition` | **stub (partial)** | `C_Map.lua` | Wraps legacy `GetPlayerMapPosition` in a `:GetXY()` object; ignores uiMapID. ClassicAPI doesn't define it. Recorded. |
-| `GetSpellBookItemTexture` (global) | compat | `SpellBook.lua` | Maps to 3.3.5 `GetSpellTexture(slot,bookType)`. ClassicAPI's `C_SpellBook` does not alias this. Used by `modules/spellbook`. |
-| `GetSpellBookItemInfo` (global) | compat | `SpellBook.lua` | Returns `"SPELL", spellID` (spellID parsed from the hyperlink). No 3.3.5 / ClassicAPI equivalent. Used by `modules/spellbook`. |
-| `GameTooltip:SetSpellBookItem` | compat | `SpellBook.lua` | Aliased to `GameTooltip:SetSpell`. No 3.3.5 / ClassicAPI equivalent. Used by `modules/spellbook`. |
+| `CreateFramePool` / `CreateTexturePool` | compat | `Pools.lua` | `:Acquire()` / `:Release()` / `:ReleaseAll()` only. Loads BEFORE `Libs\` (LibCustomGlow calls both at file load). |
+| `C_Timer.After` / `NewTimer` / `NewTicker` | compat | `C_Timer.lua` | One OnUpdate driver, hidden when idle. Handles have `:Cancel()` / `:IsCancelled()`. |
+| `C_Container.GetContainerItemInfo` (TABLE) | compat | `C_Container.lua` | Fields: iconFileID, stackCount, isLocked, quality, isReadable, hasLoot, hyperlink, isFiltered, hasNoValue, itemID. No `isBound` (no tooltip scan; nothing reads it). |
+| `C_Container.GetContainerNumSlots` / `GetContainerItemCooldown` | compat | `C_Container.lua` | Forward to the 3.3.5a globals. |
+| `C_Container.GetContainerItemQuestInfo` | compat (partial) | `C_Container.lua` | Positional → table; stub if the global is absent. |
+| `C_Container.GetItemCooldown` | guarded | `cooldownviewer/CooldownViewer.lua` | Falls back to `GetItemCooldown`. |
+| `C_Item.GetItemSpell` / `GetItemQualityColor` | compat | `C_Item.lua` | Forward to the 3.3.5a globals. |
+| `C_Item.GetItemIconByID` / `RequestLoadItemDataByID` | guarded | cooldownviewer, encounterjournal | Fall back to `GetItemIcon`; the request is skipped (GET_ITEM_INFO_RECEIVED still refreshes). |
+| `C_NewItems.IsNewItem` / `RemoveNewItem` | guarded | `core/ItemGrid.lua` | **Not provided.** The bag new-item glow is off. |
+| `C_AddOns.IsAddOnLoaded` | guarded | `core/FrameUtil.lua` | Falls back to `IsAddOnLoaded`. |
+| `C_Texture.GetAtlasInfo` | guarded | `core/Texture.lua`, `core/ButtonSkin.lua` | Atlases resolve from NewEra's own `NE.tex` registry. |
+| `C_UIDropDownMenu_*`, `C_ToggleDropDownMenu`, `C_CloseDropDownMenus`, `C_UIDropDownMenuTemplate` | vendored | `C_UIDropDownMenu.{xml,lua}` | ClassicAPI's dropdown minus `C_EasyMenu`. Grows past 2 levels on demand; `core/Menu.lua` needs that for the 3-deep ready-sound menu. Local edits marked `-- NE:`. |
+| `GetSpellBookItemName` / `PickupSpellBookItem` | compat | `SpellBook.lua` | Aliases of `GetSpellName` / `PickupSpell`. |
+| `GetSpellBookItemTexture` / `GetSpellBookItemInfo` / `GameTooltip:SetSpellBookItem` | compat | `SpellBook.lua` | `GetSpellBookItemInfo` derives the spellID from the link. |
+| `CooldownFrame_Set` / `CooldownFrame_Clear` | compat | `Compat.lua` | `SetCooldown`+`Show` / `Hide`; boolean `enable` accepted. |
+| `SOUNDKIT` (8 keys) | compat | `Compat.lua` | Only the keys NewEra plays, as 3.3.5a sound names. |
+| `Frame:RegisterUnitEvent` | compat | `Events.lua` | Per-frame unit filter; the SetScript/UnregisterEvent wrappers are per-instance. |
+| `PostAuction` | native | `auctionhouse/Sell.lua` | Calls `StartAuction` (same arguments on 3.3.5a). |
+| `Enum.ItemQuality.Poor`, `BreakUpLargeNumbers` | guarded | ItemGrid, CombinedBag | Fallbacks `0` and the raw number. |
+| `C_Spell.*`, `C_Map.*` | — | — | Nothing calls them; `C_Spell.lua` / `C_Map.lua` were deleted. |
+| `C_CooldownViewer`, `C_Sound`, `C_GuildInfo`, `C_MerchantFrame`, `C_SpecializationInfo`, `C_UnitAuras` | — | — | Named in comments only (the retail calls they stand for). |
 
-> **Mixin note (for human review):** the task brief listed `compat/Mixin.lua` under "ClassicAPI does
-> NOT provide", but `!!!ClassicAPI/Util/Mixin.lua` **does** define `Mixin`, `CreateFromMixins`, and
-> `CreateAndInitFromMixin`, and loads first. The file is therefore redundant. It was **kept** to
-> respect the explicit brief; it can be deleted (behavior-preserving) once confirmed.
+## XML templates (no longer available — replaced)
 
----
+| Template | Was used by | Now |
+|---|---|---|
+| `PortraitFrameTemplate` | auctionhouse/Window, encounterjournal/EncounterJournal | Bare frame; `NE.panelchrome` builds body, border, title, close; portrait cutout built in place. |
+| `ButtonFrameTemplate` | cooldownviewer/SettingsPanel | Bare frame + its own `Inset` and `portrait`. |
+| `SearchBoxTemplate` | cooldownviewer/SettingsPanel, encounterjournal/NavBar | `NE.FrameUtil.SearchBox` (also the spellbook's). |
 
-## Out of scope (not shimmed; owned elsewhere or by ClassicAPI)
+## Widget methods ClassicAPI added to every frame type
 
-`C_SpecializationInfo.*` (Talents-owned), `C_NewItems.*` (ClassicAPI), `C_MerchantFrame.*`
-(MerchantFrame-owned), `C_CVar.*` / `C_AddOns.*` (native globals / ClassicAPI), `C_ActionBar.*`,
-`C_Reputation.*`, `C_UnitAuras.*`, `C_FriendList.*` (ClassicAPI), `C_GuildInfo.*`, `C_ChatBubbles.*`
-— all **not-needed-v1**.
-
----
+| Method | Now |
+|---|---|
+| `:SetShown(bool)` | `NE.FrameUtil.SetShown(obj, bool)` at every call site. |
+| `:SetEnabled(bool)` (Button, EditBox) | `NE.FrameUtil.SetEnabled(obj, bool)`; an EditBox is made inert via `EnableMouse` + greyed text. |
+| `GameTooltip:SetItemByID` | guarded → `SetHyperlink("item:"..id)`. |
+| `Alpha:SetFromAlpha/SetToAlpha` | guarded → native `SetChange` delta. |
+| `SetColorTexture` | guarded → `SetTexture(r,g,b,a)`. |
+| `SetTextScale`, `SetSwipeColor`, `SetDrawSwipe/Bling`, `SetSnapToPixelGrid`, `SetTexelSnappingBias`, `SetObeyStepOnDrag`, `SetClipsChildren`, `SetMask`, `CreateMaskTexture`/`AddMaskTexture` | guarded → skipped. Cosmetic only (glyph header scale, CDM swipe tint, EJ content clipping). |
 
 ## Runtime self-report
 
-`NE.compat` exposes:
-- capability bools: `classicAPI, mixin, container, item, spell, map`
-- `NE.compat.stubs` — array of `{ sym, why }` for every symbol that could only be stubbed
-  (`C_Spell.GetSpellPowerCost`, `C_Map.GetMapInfo`, `C_Map.GetPlayerMapPosition`, and the no-native
-  fallback branch of `C_Container.GetContainerItemQuestInfo`). QA's `/dnetest` can dump this.
+`NE.compat.stubs` — array of `{ sym, why }` for every symbol that could only be stubbed
+(currently only the no-native branch of `C_Container.GetContainerItemQuestInfo`). QA's `/dnetest` can
+dump it.
 
 ## Broken-on-some-clients guards
 
-- `GetMapDebugObjectInfo` (`compat/MapDebugObjects.lua`) — not a ClassicAPI gap. Both map-debug
-  functions are dead stubs in 3.3.5a 12340 (`GetNumMapDebugObjects` returns a constant 0,
-  `GetMapDebugObjectInfo` returns nothing), so stock never exercises the loop that reads them. A
-  client with a DLL or exe patch that implements one and not the other makes stock
-  `WorldMapFrame_Update` throw "attempt to compare number with nil" at WorldMapFrame.lua:412. The
-  loop is the last thing that function does, so the cost is the error itself, not lost map work —
-  but it fires on every update and buries real errors. The shim passes a usable answer through untouched and
-  reports an unusable one as a positionless object, which stock's own guard skips.
-
-## Headline
-
-- `!!!ClassicAPI` is a **hard dependency** and owns `C_Timer`, `C_Texture`, `Mixin`, the bulk of
-  `C_Container` / `C_Item` / `C_Spell` / `C_SpellBook`, and `C_Map.GetBestMapForUnit`.
-- `compat/C_Timer.lua` and `compat/C_Texture.lua` were **deleted** (fully ClassicAPI-owned).
-- `compat/` now ships only ClassicAPI gaps: two `C_Container` fns, two `C_Item` fns, one `C_Spell`
-  stub, two `C_Map` stubs, and three spellbook globals (plus the redundant `Mixin.lua`, retained
-  pending review). `C_EquipmentSet.lua` was **deleted** along with the character panel it gated —
-  DragonUI ships its own character window now, and nothing else referenced the namespace.
+- `GetMapDebugObjectInfo` (`compat/MapDebugObjects.lua`). Both map-debug functions are dead stubs in
+  3.3.5a 12340 (`GetNumMapDebugObjects` returns a constant 0, `GetMapDebugObjectInfo` returns
+  nothing), so stock never exercises the loop that reads them. A client with a DLL or exe patch that
+  implements one and not the other makes stock `WorldMapFrame_Update` throw "attempt to compare
+  number with nil" at WorldMapFrame.lua:412 on every update. The shim passes a usable answer through
+  untouched and reports an unusable one as a positionless object, which stock's own guard skips.

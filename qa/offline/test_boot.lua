@@ -105,21 +105,7 @@ function CreateFrame(kind, name, parent, template)
   if name then _G[name] = f end
   allFrames[#allFrames + 1] = f
 
-  -- Templates are otherwise ignored here, with ONE exception. ButtonFrameTemplate ships an Inset
-  -- child frame whose $parentBg carries parentKey="Bg" — the old ClassicAPI marble, BACKGROUND
-  -- subLevel -5. It is the one template-supplied region our panels reach for by name, and a guard
-  -- that says "the marble stays hidden" asserts precisely nothing while f.Inset is nil.
-  --
-  -- Note what is NOT modelled: the template's own $parentBg on the frame itself has NO parentKey
-  -- (UIPanelTemplates.xml:1517), which is exactly why PanelChrome builds f.Bg fresh instead of
-  -- re-texturing that one — and why the two ended up on opposite sides of subLevel 0.
-  if template == "ButtonFrameTemplate" then
-    local inset = CreateFrame("Frame", name and (name .. "Inset"), f)
-    inset.Bg = inset:CreateTexture(nil, "BACKGROUND", nil, -5)
-    f.Inset = inset
-  end
-
-  -- UIPanelButtonTemplate's normal texture. On 3.3.5a that ONE path is the template's whole
+  -- Templates are otherwise ignored here, with ONE exception: UIPanelButtonTemplate's normal texture. On 3.3.5a that ONE path is the template's whole
   -- identity at runtime, and it is what NE.buttonskin's addon-wide sweep matches on — a running
   -- frame cannot be asked which template built it. Without this the sweep would find nothing here
   -- and every assertion about it would pass by describing an empty tree.
@@ -266,6 +252,8 @@ function frameMeta:UpdateScrollChildRect() end
 function frameMeta:SetAutoFocus() end
 function frameMeta:ClearFocus() end
 function frameMeta:SetTextInsets() end
+function frameMeta:SetMaxLetters() end
+function frameMeta:HasFocus() return false end
 function frameMeta:SetText(t) self._text = t end
 function frameMeta:GetText() return self._text or "" end
 function frameMeta:SetFontObject() end
@@ -437,9 +425,8 @@ UIParent = CreateFrame("Frame", "UIParent")
 -- A real screen size. It defaulted to 0x0, and code that asks "is this frame on the left half or the
 -- right half?" then always answers the same way — so one of the two branches could never run here.
 UIParent:SetSize(1024, 768)
--- ClassicAPI's SearchBoxTemplate seeds the edit box with this string as its placeholder, so any
--- code reading the box back sees "Search" until the player types. That is a real behaviour, not
--- decoration — it dimmed the whole settings grid once.
+-- An old-style SearchBoxTemplate seeds the edit box with this string as its placeholder, so code
+-- reading the box back must treat "Search" as empty — it dimmed the whole settings grid once.
 SEARCH, YES, NO = "Search", "Yes", "No"
 BOOKTYPE_SPELL = "spell"
 MAX_TOTEMS = 4

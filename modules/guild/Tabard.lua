@@ -286,8 +286,8 @@ function G.UpdateTabard()
 
   -- Our crest supplies its own plate, so the column's banner and NoLogo shield would only double up
   -- behind it. They come back untinted whenever there's no design to show.
-  if column.Banner then column.Banner:SetShown(not filled) end
-  if column.Crest then column.Crest:SetShown(not filled) end
+  if column.Banner then NE.FrameUtil.SetShown(column.Banner, not filled) end
+  if column.Crest then NE.FrameUtil.SetShown(column.Crest, not filled) end
 
   -- Retry while anything is still missing: the guild design streams in after login/guild-join, and
   -- the plate atlas may not have resolved yet. FillTabardCrest returns false for BOTH cases, so one
