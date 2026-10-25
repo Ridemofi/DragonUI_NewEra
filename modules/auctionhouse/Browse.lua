@@ -184,10 +184,15 @@ local function buildCategoryList(parent)
     if cached then return cached end
     local list = {}
     if type(GetAuctionInvTypes) == "function" then
-      local ok, res = pcall(function() return { GetAuctionInvTypes(classIndex, subClassIndex) } end)
+      -- Hidden slots return a nil display flag, so the table has holes and #res can stop short
+      -- (dropped Cloth > Back, issue #97); count the returns with select("#") as stock does.
+      local ok, res, n = pcall(function()
+        local function pack(...) return { ... }, select("#", ...) end
+        return pack(GetAuctionInvTypes(classIndex, subClassIndex))
+      end)
       if ok and res then
         local pos = 0
-        for i = 1, #res, 2 do
+        for i = 1, n, 2 do
           pos = pos + 1
           local token, display = res[i], res[i + 1]
           if display and token and token ~= "" then
