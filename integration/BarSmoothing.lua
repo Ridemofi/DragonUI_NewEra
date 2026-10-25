@@ -43,6 +43,8 @@ local LOW = 0.2
 local STATUSBAR = "Interface\\TargetingFrame\\UI-StatusBar"   -- flash and pulse art
 local DARK = 0.45   -- the trail's shade of the fill colour
 local SPARK = "Interface\\CastingBar\\UI-CastingBar-Spark"
+local CAP = 4          -- Modern nameplate fill ("barFill"): px of rounded end on each side
+local SPARK_NUDGE = 2  -- Modern: px right of the slice edge where the rounded end reads (tuned from video)
 
 local exp, abs, min, max, ceil, sin = math.exp, math.abs, math.min, math.max, math.ceil, math.sin
 local bars, moving, crops = {}, {}, {}
@@ -93,7 +95,7 @@ local function placeSpark(s, f)
   end
   t:SetSize(max(h, 8), h * 2.2)
   t:ClearAllPoints()
-  t:SetPoint("CENTER", bar, "LEFT", f * w, 0)
+  t:SetPoint("CENTER", bar, "LEFT", f * w + (bar._retailFillOn and SPARK_NUDGE or 0), 0)
   t:Show()
   sparks[t] = true
   sparkDriver:Show()
@@ -113,7 +115,9 @@ local function show(s, v)
 end
 
 -- Our textures: lazily made on the bar, placed over the fraction span a..b of its width.
+-- Modern plates (rounded slice fill under an OVERLAY border) draw them on ARTWORK, under the border.
 local function texOf(s, key, layer, r, g, b, a, add)
+  if s.bar._retailFillOn then layer = "ARTWORK" end
   local t = s[key]
   if not t then
     t = s.bar:CreateTexture(nil, layer)
@@ -122,6 +126,7 @@ local function texOf(s, key, layer, r, g, b, a, add)
     if add then t:SetBlendMode("ADD") end
     s[key] = t
   end
+  if t:GetDrawLayer() ~= layer then t:SetDrawLayer(layer) end
   return t
 end
 
@@ -129,6 +134,19 @@ local function span(s, t, a, b)
   local bar = s.bar
   local w = bar:GetWidth()
   a, b = max(a, 0), min(b, 1)
+  if bar._retailFillOn then
+    -- Modern: the fill is a rounded slice of the reference size; keep inside its flat middle.
+    local h
+    w, h = NP.config.GetBarRefSize()
+    if w <= 2 * CAP then return t:Hide() end
+    a, b = max(a, CAP / w), min(b, 1 - CAP / w)
+    if b <= a then return t:Hide() end
+    t:ClearAllPoints()
+    t:SetPoint("TOPLEFT", bar, "TOPLEFT", a * w, 0)
+    t:SetSize((b - a) * w, h)
+    t:SetTexCoord(a, b, 0, 1)
+    return t:Show()
+  end
   if b <= a or w <= 0 then return t:Hide() end
   t:ClearAllPoints()
   t:SetPoint("TOPLEFT", bar, "TOPLEFT", a * w, 0)
@@ -144,26 +162,29 @@ local function clearTrail(s)
   if s.trailSlice then NP.atlas.HideSlice(s.trailSlice) end
 end
 
--- The trail is a copy of the bar's own fill (same art, a darker shade of its colour) running from
--- the left edge to the trail's top, one sublevel under the fill, so it shows only past the fill.
--- DragonUI's retail nameplate fill is a 9-slice (rounded caps), so there the copy is a slice too.
+-- The trail is the bar's own fill art in a darker shade of its colour, over the lost span only
+-- (fill edge to the trail's top), so it never overlaps the fill whatever the draw order.
+-- DragonUI's retail nameplate fill is a 9-slice (rounded caps), so there the trail is a slice too.
 local function drawTrail(s)
   local bar, top = s.bar, min(s.top, 1)
   if bar._retailFillOn and bar._retailFill then
     local A = NP.atlas
     local sl = s.trailSlice or A.CreateSlice(bar, "BORDER")
     s.trailSlice = sl
+    local a = max(s.frac, 0)
+    if top <= a then return A.HideSlice(sl) end
     local r, g, b = bar._retailFill[5]:GetVertexColor()
     local w, h = NP.config.GetBarRefSize()
-    if A.LayoutSlice(sl, "barFill", bar, w * top, h, 0, 0, 0, 0) then
+    -- LayoutSlice anchors pieces TOPLEFT at x = -padL over a (w + padL + padR) wide rect:
+    -- a negative padL starts the slice at w*a and narrows it to w*(top - a).
+    if A.LayoutSlice(sl, "barFill", bar, w * top, h, -w * a, 0, 0, 0) then
       for i = 1, 9 do sl[i]:SetDrawLayer("BORDER", -1) end
       A.SetSliceVertexColor(sl, r * DARK, g * DARK, b * DARK, 1)
       A.ShowSlice(sl)
     end
     return
   end
-  -- Plain bars: only the lost span (fill edge to top), so it never overlaps the fill whatever the
-  -- draw order (a sublevel under the fill still covered it on some unit frames).
+  -- Plain bars: same lost span (a sublevel under the fill still covered it on some unit frames).
   local fill, w = bar:GetStatusBarTexture(), bar:GetWidth()
   local a = max(s.frac, 0)
   if not fill or w <= 0 or top <= a then return s.trailTex and s.trailTex:Hide() end
