@@ -101,6 +101,8 @@ integration\Options.lua
 # secure children its keypress snippet then asks about). Pure interop patch; the file's header is
 # addressed to DragonUI's maintainer and says what makes it deletable.
 integration\DragonUIProtection.lua
+# Forever's talent-apply flash + sounds, drawn inside DragonUI's talent window.
+integration\TalentCommitFX.lua
 
 # --- qa: in-game harness + manifest (owner: QA/Harness Engineer) ---
 qa\Harness.lua
