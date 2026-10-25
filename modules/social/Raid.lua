@@ -45,12 +45,22 @@ end
 -- function refuses a tainted execution path. There's no way around it either: 3.3.5a's secure
 -- attribute list covers target/focus/assist/spell/item/macro/action/pet and has nothing for party
 -- assignments, and routing through a Blizzard dropdown still carries our taint into the call.
--- So the two items are gone rather than left in to throw a popup every time.
+-- So no menu entry can make these calls.
 --
--- Set Focus went with them, same cause -- FocusUnit is protected too. Nothing on this client calls
--- it directly; Cell_Wrath reaches focus through SetAttribute("unit", "focus") on a secure button
--- (RaidFrames/Groups/SpotlightFrame.lua), which is the only supported route and needs the slot
--- itself to be a SecureActionButton, not a menu entry.
+-- Set Focus has the same problem -- FocusUnit is protected too.
+--
+-- Issue #96 brings all three back without a tainted call. The route is the one secure path stock
+-- leaves open: SecureActionButtonTemplate with type="macro". The /focus, /maintank and /mainassist
+-- secure slash commands (ChatFrame.lua SecureCmdList FOCUS / MAINTANKON / MAINASSISTON) each take a
+-- name, and a macro run from a secure button executes them untainted on the user's click. The three
+-- items are ordinary rows in the menu table with no func. Out of combat, once EasyMenu has drawn the
+-- list (stock UIDropDownMenu, DropDownList1; compat/ ships no C_EasyMenu), a transparent secure
+-- button from a pool of three is laid over each row (SetAllPoints on DropDownList1ButtonN). The
+-- macrotext is set there and then. In combat the rows stay clickable but only print the stock "not in
+-- combat" error, and no overlays are shown: protected frames can't be shown, hidden or re-attributed under lockdown. The
+-- overlays hide when the list hides, when another menu reuses it, after a click, and on
+-- PLAYER_REGEN_DISABLED, which also closes our menu. MT/MA follow stock UnitPopup gating: leader or
+-- assistant, and not already in that role.
 --
 -- What's left is what's actually callable. The APIDocumentation addon flags the protected ones with
 -- a (commented-out) IsProtectedFunction line -- present on SetPartyAssignment/ClearPartyAssignment/
@@ -73,17 +83,72 @@ local function raidTarget(slot, name)
   return name
 end
 
+-- Secure macro overlays on menu rows (see the #96 note above). Parented to UIParent, not to the
+-- dropdown, so the insecure list never gets protected children.
+local overlays
+local function hideOverlays()
+  if not overlays or InCombatLockdown() then return end
+  for _, o in ipairs(overlays) do o:Hide(); o:ClearAllPoints() end
+end
+
+local function showOverlays(rows)
+  if InCombatLockdown() or not DropDownList1 then return end
+  if not overlays then
+    overlays = {}
+    for i = 1, 3 do
+      local o = CreateFrame("Button", "NE_SocialRaidSecureRow" .. i, UIParent, "SecureActionButtonTemplate")
+      o:SetFrameStrata("FULLSCREEN_DIALOG")
+      o:SetAttribute("type", "macro")
+      o:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+      o:SetScript("PostClick", function() hideOverlays(); CloseDropDownMenus() end)
+      overlays[i] = o
+    end
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("PLAYER_REGEN_DISABLED")
+    f:SetScript("OnEvent", function()
+      hideOverlays()
+      if DropDownList1:IsShown() and DropDownList1.dropdown == raidSlotMenuFrame then CloseDropDownMenus() end
+    end)
+    DropDownList1:HookScript("OnHide", hideOverlays)
+    hooksecurefunc("ToggleDropDownMenu", function()
+      if DropDownList1.dropdown ~= raidSlotMenuFrame then hideOverlays() end
+    end)
+  end
+  hideOverlays()
+  for i, r in ipairs(rows) do
+    local row, o = _G["DropDownList1Button" .. r[1]], overlays[i]
+    if row and row:IsShown() then
+      o:SetAttribute("macrotext", r[2])
+      o:SetAllPoints(row)
+      o:SetFrameLevel(row:GetFrameLevel() + 2)
+      o:Show()
+    end
+  end
+end
+
 local function openRaidSlotMenu(slot)
   if not (EasyMenu and slot and slot._name) then return end
   if not raidSlotMenuFrame then
     raidSlotMenuFrame = CreateFrame("Frame", "NE_SocialRaidSlotMenu", UIParent, "UIDropDownMenuTemplate")
   end
-  -- Everything the menu still offers is leader/assist-only, so for a rank-and-file member it would
-  -- be a name and a Cancel button. Don't open it at all rather than pop an empty one.
-  if not ((IsRaidLeader and IsRaidLeader()) or (IsRaidOfficer and IsRaidOfficer())) then return end
-
+  local isOfficer = (IsRaidLeader and IsRaidLeader()) or (IsRaidOfficer and IsRaidOfficer())
+  local inCombat = InCombatLockdown and InCombatLockdown()
   local name = slot._name
   local menu = { { text = name, isTitle = true, notCheckable = true } }
+  local secureRows = {}   -- { menu index, macrotext }
+  local function addSecure(text, macro)
+    menu[#menu + 1] = { text = text, notCheckable = true, func = inCombat and function()
+        UIErrorsFrame:AddMessage(ERR_NOT_IN_COMBAT or "You can't do that while in combat", 1, 0.1, 0.1)
+      end or nil }
+    secureRows[#secureRows + 1] = { #menu, macro }
+  end
+  addSecure(SET_FOCUS or "Set Focus", "/focus " .. name)
+  if not isOfficer then
+    menu[#menu + 1] = { text = CANCEL or "Cancel", notCheckable = true }
+    EasyMenu(menu, raidSlotMenuFrame, "cursor", 0, 0, "MENU")
+    if not inCombat then showOverlays(secureRows) end
+    return
+  end
   menu[#menu + 1] = { text = L["Promote to Raid Leader"], notCheckable = true, func = function()
       if PromoteToLeader then PromoteToLeader(raidTarget(slot, name), true) end
       SO.RefreshRaid()
@@ -92,6 +157,25 @@ local function openRaidSlotMenu(slot)
       if PromoteToAssistant then PromoteToAssistant(raidTarget(slot, name), true) end
       SO.RefreshRaid()
     end }
+  local role = slot._index and select(10, GetRaidRosterInfo(slot._index))
+  if role ~= "MAINTANK" then addSecure(SET_MAIN_TANK or "Promote to Main Tank", "/maintank " .. name) end
+  if role ~= "MAINASSIST" then addSecure(SET_MAIN_ASSIST or "Promote to Main Assist", "/mainassist " .. name) end
+  -- Demote / Master Looter (#96): unprotected, gated as stock UnitPopup gates RAID_DEMOTE and
+  -- LOOT_PROMOTE (leader only; ML only while loot is already "master" and this isn't the looter).
+  local unit, isLeader = slot._unit, IsRaidLeader and IsRaidLeader()
+  if isLeader and unit and UnitIsRaidOfficer and UnitIsRaidOfficer(unit)
+     and not (UnitIsPartyLeader and UnitIsPartyLeader(unit)) then
+    menu[#menu + 1] = { text = DEMOTE or "Demote", notCheckable = true, func = function()
+        if DemoteAssistant then DemoteAssistant(raidTarget(slot, name), true) end
+        SO.RefreshRaid()
+      end }
+  end
+  local lootMethod, _, mlIndex = GetLootMethod and GetLootMethod()
+  if isLeader and lootMethod == "master" and not (unit and unit == "raid" .. tostring(mlIndex)) then
+    menu[#menu + 1] = { text = LOOT_PROMOTE or "Promote to Master Looter", notCheckable = true, func = function()
+        if SetLootMethod then SetLootMethod("master", name, 1) end
+      end }
+  end
   menu[#menu + 1] = { text = REMOVE or "Remove", notCheckable = true, func = function()
       -- Name, not the token, matching Cell_Wrath: an uninvite that lands on the wrong raid index
       -- is the one misfire here you can't take back.
@@ -100,6 +184,7 @@ local function openRaidSlotMenu(slot)
     end }
   menu[#menu + 1] = { text = CANCEL or "Cancel", notCheckable = true }
   EasyMenu(menu, raidSlotMenuFrame, "cursor", 0, 0, "MENU")
+  if not inCombat then showOverlays(secureRows) end
 end
 
 -- ---------------------------------------------------------------------------
