@@ -82,7 +82,7 @@ end
 local function placeSpark(s, f)
   local bar = s.bar
   local w, h = bar:GetWidth(), bar:GetHeight()
-  if bar._retailFillOn then w, h = NE.dragon.NP.config.GetBarRefSize() end
+  if bar._retailFillOn then w, h = NP.config.GetBarRefSize() end
   if not cfg.spark or f < 0.01 or f > 0.99 or w <= 0 or not bar:IsVisible() then return hideSpark(s) end
   local t = s.sparkTex
   if not t then
@@ -141,7 +141,7 @@ end
 local function clearTrail(s)
   s.top = nil
   if s.trailTex then s.trailTex:Hide() end
-  if s.trailSlice then NE.dragon.NP.atlas.HideSlice(s.trailSlice) end
+  if s.trailSlice then NP.atlas.HideSlice(s.trailSlice) end
 end
 
 -- The trail is a copy of the bar's own fill (same art, a darker shade of its colour) running from
@@ -150,11 +150,11 @@ end
 local function drawTrail(s)
   local bar, top = s.bar, min(s.top, 1)
   if bar._retailFillOn and bar._retailFill then
-    local A = NE.dragon.NP.atlas
+    local A = NP.atlas
     local sl = s.trailSlice or A.CreateSlice(bar, "BORDER")
     s.trailSlice = sl
     local r, g, b = bar._retailFill[5]:GetVertexColor()
-    local w, h = NE.dragon.NP.config.GetBarRefSize()
+    local w, h = NP.config.GetBarRefSize()
     if A.LayoutSlice(sl, "barFill", bar, w * top, h, 0, 0, 0, 0) then
       for i = 1, 9 do sl[i]:SetDrawLayer("BORDER", -1) end
       A.SetSliceVertexColor(sl, r * DARK, g * DARK, b * DARK, 1)
