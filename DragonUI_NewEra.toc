@@ -103,6 +103,8 @@ integration\Options.lua
 integration\DragonUIProtection.lua
 # Forever's talent-apply flash + sounds, drawn inside DragonUI's talent window.
 integration\TalentCommitFX.lua
+# Unit-frame health bars glide to new values instead of snapping.
+integration\BarSmoothing.lua
 
 # --- qa: in-game harness + manifest (owner: QA/Harness Engineer) ---
 qa\Harness.lua
