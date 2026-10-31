@@ -378,5 +378,15 @@ modules\bossmods\Register.lua
 modules\detailsskin\DetailsSkin.lua
 modules\detailsskin\Register.lua
 
+# --- Options (one DragonUI-styled window hosting the stock Video/Sound/Interface/AddOns panels) ---
+# Moved here from the server's FrameXML options_ui module. Hosts the stock panels and runs their own
+# handlers; routes every way into the stock frames through a HookScript on their OnShow. Taint notes:
+# modules/options/TAINT.md. Load order: Window (frame, hosting, routing, O.Boot) -> Search -> Skin
+# (stock control + Esc-menu restyle) -> Register (the reload-gated module entry that calls O.Boot).
+modules\options\Window.lua
+modules\options\Search.lua
+modules\options\Skin.lua
+modules\options\Register.lua
+
 # --- demo: Sprint-0 proof panel (owner: Core/Chrome Engineer) ---
 core\_HelloDemo.lua

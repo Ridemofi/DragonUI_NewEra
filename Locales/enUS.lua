@@ -581,3 +581,16 @@ L["Visit a profession trainer in a major city to learn a new profession. You may
 
 L["Current chat (%s)"] = true
 L["Link to"] = true
+
+-- ============================================================================
+-- OPTIONS WINDOW
+-- ============================================================================
+
+L["No matches"] = true
+L["One window for the Video, Sound, Interface and AddOns options, with search. Reload (/reload) to apply."] = true
+L["Options can't change panels in combat."] = true
+L["Options window (Video/Sound/Interface)"] = true
+L["Options window: the server's options window is installed; using that one."] = true
+L["Settings can't be applied in combat."] = true
+L["Settings will be saved when combat ends."] = true
+L["Unsaved changes will be undone when combat ends."] = true

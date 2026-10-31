@@ -28,6 +28,7 @@ SECTIONS = [
     ("modules/guild", "GUILD"),
     ("modules/levelup", "LEVEL UP DISPLAY"),
     ("modules/lfg", "GROUP FINDER"),
+    ("modules/options", "OPTIONS WINDOW"),
     ("modules/professions", "PROFESSIONS"),
     ("modules/social", "SOCIAL"),
     ("modules/spellbook", "SPELLBOOK"),

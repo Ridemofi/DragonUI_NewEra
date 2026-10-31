@@ -225,11 +225,33 @@ fi
 echo
 
 # =============================================================================
+# 4. Offline smoke tests (stubbed client; fatal on failure)
+# =============================================================================
+# Only the tests listed here run in the gate: they are self-contained and fast. The rest of
+# qa/offline/ is run by hand (see qa/offline/README.md).
+section "4. Offline smoke tests"
+SMOKE_TESTS=( qa/offline/test_options.lua )
+LUA_RUN="$(command -v luajit || command -v lua5.1 || command -v lua || true)"
+if [ -z "$LUA_RUN" ]; then
+    warn "no luajit/lua5.1 found — skipping smoke tests"
+else
+    for t in "${SMOKE_TESTS[@]}"; do
+        if out="$("$LUA_RUN" "$t" 2>&1)"; then
+            ok "$t ($(printf '%s\n' "$out" | tail -1))"
+        else
+            printf '%s\n' "$out" | grep -E 'FAIL|error|\.lua:' | sed 's/^/    /'
+            err "smoke test failed: $t"
+        fi
+    done
+fi
+echo
+
+# =============================================================================
 # Final banner
 # =============================================================================
 echo "------------------------------------------------------------"
 if [ "$FAIL" -ne 0 ]; then
-    printf '%s\n' "${RED}${BLD}#### STATIC CHECK: FAIL ####${RST}  (missing TOC file or luac error above)"
+    printf '%s\n' "${RED}${BLD}#### STATIC CHECK: FAIL ####${RST}  (missing TOC file, luac error or smoke-test failure above)"
     [ "$WARN_COUNT" -gt 0 ] && printf '%s\n' "${YEL}(${WARN_COUNT} advisory warning(s) also reported)${RST}"
     exit 1
 else

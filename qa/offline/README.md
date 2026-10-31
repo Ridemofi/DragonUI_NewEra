@@ -34,6 +34,14 @@ Syntax-gate any set of files (Lua 5.1):
 node qa/offline/check.js core/GridLayout.lua modules/cooldownviewer/Viewers.lua
 ```
 
+Smoke-test the options window (17 assertions: nothing is hooked until the module boots, the Blizzard
+panel list, the stock OnShow redirect, clean Interface panels not cancelled, combat leaving the stock
+window alone and deferring the revert, search). `qa/staticcheck.sh` runs this one in its section 4:
+
+```bash
+luajit qa/offline/test_options.lua
+```
+
 Unit-test the grid layout engine (28 assertions: cell arithmetic, wrapping, direction mirroring,
 per-child scale, retired/hidden children, degenerate cases):
 

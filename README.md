@@ -207,6 +207,16 @@ The vendor window in the same chrome as the rest of the set, laid out against re
 - **Sell all junk** — retail's one-click button. It desaturates when there is nothing to sell, and always asks before it sells. Only poor-quality items the vendor will actually pay for, never quest items.
 - **Buyback undo** — retail's undo arrow on the buyback slot, greyed out when there is nothing to buy back.
 
+### Options
+
+One window for the client's Video, Sound, Interface and AddOns settings, in the same chrome as the rest of the set. The Esc menu's Video, Sound and Interface buttons open it, and so does any addon that opens its own options page.
+
+- **The stock settings, hosted** — every page is the client's own panel, moved into this window, so every setting, tooltip, restart warning and reset popup behaves exactly as it does in the stock windows.
+- **One category list** — Video, Sound, Interface and AddOns as collapsible groups, with Okay / Cancel / Apply / Defaults along the bottom.
+- **Search** — type to find a setting by its label, tooltip or CVar, or an addon page by name; clicking a result opens the page and flashes the setting.
+- **DragonUI controls** — checkboxes, sliders, dropdowns and buttons on those pages wear DragonUI's art, and the Esc menu buttons get DragonUI's button art and font.
+- **Combat** — in combat the Esc menu opens the stock windows instead, and closing this window in combat saves or undoes your changes once combat ends.
+
 ## Roadmap
 
 Faithfully downporting the remaining NewEra panels to 3.3.5a:
