@@ -50,13 +50,18 @@ if not NE.qa._errorHookInstalled then
         -- Record defensively; never let our own bookkeeping throw.
         local ok = pcall(function()
             local list = NE.qa.errors
-            list[#list + 1] = {
+            local n = #list + 1
+            list[n] = {
                 msg  = tostring(err),
                 when = (GetTime and GetTime()) or 0,
             }
-            -- Trim to the last MAX_ERRORS (drop oldest).
-            while #list > MAX_ERRORS do
-                table.remove(list, 1)
+            -- Keep the last MAX_ERRORS in a fresh table. A bounded copy, never a
+            -- `while #list > MAX` loop: with holes in the table (saved data) the
+            -- length operator need not shrink, and that loop froze the client.
+            if n > MAX_ERRORS then
+                local keep = {}
+                for i = n - MAX_ERRORS + 1, n do keep[#keep + 1] = list[i] end
+                NE.qa.errors = keep
             end
         end)
         -- Always chain to the previous handler so nothing is swallowed.
