@@ -46,6 +46,7 @@ NE.qa.errors = NE.qa.errors or {}
 if not NE.qa._errorHookInstalled then
     NE.qa._errorHookInstalled = true
     local prev = geterrorhandler and geterrorhandler() or nil
+    local busy = false
     local function capture(err, ...)
         -- Record defensively; never let our own bookkeeping throw.
         local ok = pcall(function()
@@ -64,9 +65,15 @@ if not NE.qa._errorHookInstalled then
                 NE.qa.errors = keep
             end
         end)
-        -- Always chain to the previous handler so nothing is swallowed.
-        if prev then
-            return prev(err, ...)
+        -- Always chain to the previous handler so nothing is swallowed. Not a tail
+        -- call, and never re-entered: when another addon's handler calls
+        -- geterrorhandler() again, the chain leads back here, and a tail-call
+        -- cycle never overflows the stack, so the client froze for good.
+        if prev and not busy then
+            busy = true
+            local r = { pcall(prev, err, ...) }
+            busy = false
+            return unpack(r, 2)
         end
         return ok
     end

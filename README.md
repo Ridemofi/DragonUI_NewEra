@@ -214,7 +214,7 @@ One window for the client's Video, Sound, Interface and AddOns settings, in the 
 - **The stock settings, hosted** — every page is the client's own panel, moved into this window, so every setting, tooltip, restart warning and reset popup behaves exactly as it does in the stock windows.
 - **One category list** — Video, Sound, Interface and AddOns as collapsible groups, with Okay / Cancel / Apply / Defaults along the bottom.
 - **Search** — type to find a setting by its label, tooltip or CVar, or an addon page by name; clicking a result opens the page and flashes the setting.
-- **DragonUI controls** — checkboxes, sliders, dropdowns and buttons on those pages wear DragonUI's art, and the Esc menu gets the same DragonUI window, with DragonUI's button art and font.
+- **DragonUI controls** — checkboxes, sliders, dropdowns and buttons on those pages wear DragonUI's art, and the Esc menu buttons get DragonUI's button art and font.
 - **Scaling** — follows the game's UI Scale by default; change it under New Era › Window Scaling › Options.
 - **Combat** — in combat the Esc menu opens the stock windows instead, and closing this window in combat saves or undoes your changes once combat ends.
 
