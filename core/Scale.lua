@@ -43,6 +43,7 @@ local DEFAULTS = {
   encounterjournal = { mode = "none",   custom = 1.0 },
   combinedbag      = { mode = "ui",     custom = 1.0 },
   options          = { mode = "ui",     custom = 1.0 },
+  gamemenu         = { mode = "ui",     custom = 1.0 },   -- Esc menu; no row in the options list
 }
 
 -- BUG FIX (owner report 2026-07-17, round two: "the default is still massive" after DEFAULTS.social/
@@ -101,6 +102,18 @@ local function unpin(f)
   if NE.FrameUtil and NE.FrameUtil.Unpin then NE.FrameUtil.Unpin(f) end
 end
 
+-- "ui" mode: the window's effective scale is the UI Scale slider's value whenever "Use UI Scale" is
+-- ticked, whatever UIParent's own scale is (owner report 2026-10-31: the Options window did not follow
+-- the slider while inheriting UIParent at 1.0). When UIParent already carries the slider value this
+-- is 1.0, i.e. the old behaviour.
+local function uiFactor()
+  if not (GetCVarBool and GetCVarBool("useUiScale")) then return 1.0 end
+  local want = tonumber(GetCVar("uiScale"))
+  local have = UIParent and UIParent.GetEffectiveScale and UIParent:GetEffectiveScale()
+  if not want or not have or have <= 0 then return 1.0 end
+  return want / have
+end
+
 -- Apply the current setting to the window's registered frame (no-op if not registered yet).
 function S.Apply(window)
   local f = S._frames[window]
@@ -118,9 +131,9 @@ function S.Apply(window)
     if c < S.MIN then c = S.MIN elseif c > S.MAX then c = S.MAX end
     unpin(f)
     f:SetScale(c * base)
-  else  -- "ui": inherit UIParent so the window tracks the game UI Scale slider
+  else  -- "ui": track the game's UI Scale slider
     unpin(f)
-    f:SetScale(1.0 * base)
+    f:SetScale(uiFactor() * base)
   end
 end
 
@@ -141,3 +154,17 @@ function S.SetCustom(window, value)
   if st then st[window] = st[window] or {}; st[window].custom = v end
   S.Apply(window)
 end
+
+-- Re-apply "ui"-mode windows when the slider (or the screen) changes. Next frame: UIParent's own scale
+-- may only update after the event.
+local watcher = CreateFrame("Frame")
+watcher:RegisterEvent("UI_SCALE_CHANGED")
+watcher:RegisterEvent("DISPLAY_SIZE_CHANGED")
+watcher:RegisterEvent("CVAR_UPDATE")
+watcher:SetScript("OnEvent", function()
+  C_Timer.After(0, function()
+    for window in pairs(S._frames) do
+      if S.Get(window) == "ui" then S.Apply(window) end
+    end
+  end)
+end)

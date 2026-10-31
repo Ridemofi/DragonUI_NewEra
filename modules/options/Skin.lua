@@ -117,12 +117,17 @@ function O.SkinGameMenu()
     for _, r in ipairs({ menu:GetRegions() }) do
       if r:GetObjectType() == "FontString" and r:GetText() == MAIN_MENU then r:Hide() end
     end
-    NE.chrome.Apply(menu, { layout = "PortraitFrameTemplate", title = MAIN_MENU, noPortrait = true, noCloseButton = true })
+    NE.chrome.Apply(menu, { layout = "ButtonFrameTemplateNoPortrait", title = MAIN_MENU, noPortrait = true, noCloseButton = true })
     local band = menu._neTitleBand
     if band then
       band:ClearAllPoints()
       band:SetPoint("TOPLEFT", 24, -1)
       band:SetPoint("TOPRIGHT", -24, -1)
+    end
+    -- Follows the UI Scale slider like the Options window (core/Scale.lua "ui" mode, the default).
+    if NE.scale and NE.scale.SetFrame then
+      NE.scale.SetFrame("gamemenu", menu)
+      NE.scale.Apply("gamemenu")
     end
   end
 
