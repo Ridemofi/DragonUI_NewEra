@@ -11,7 +11,8 @@
 -- function, script or table field is replaced; the "already skinned" marks live in a local table, not
 -- on the stock frames. Art that is not registered is skipped (the stock art stays).
 --
--- Esc menu: button art and font only, through DragonUI's own ForeverUI.SkinButton (what DragonUI's
+-- Esc menu: DragonUI window chrome (backdrop + header swapped, see O.SkinGameMenu), and button art and
+-- font through DragonUI's own ForeverUI.SkinButton (what DragonUI's
 -- injected "DragonUI" button already wears) with NE's red 3-slice as the fallback. No button is moved,
 -- created, resized or re-scripted, so GameMenuFrame's layout stays as stock (NewEra's own
 -- NewEra_Shared.xml avoids it for the same taint reason).
@@ -106,6 +107,25 @@ end
 function O.SkinGameMenu()
   local menu = _G.GameMenuFrame
   if not menu then return end
+  -- Window: the same DragonUI chrome as the Options window. The stock dialog backdrop, header art and
+  -- "Main Menu" label are hidden in place; the chrome's own pieces are new child regions. The title band
+  -- is re-anchored symmetric (PanelChrome leaves 58px on the left for a portrait this menu doesn't have).
+  if NE.chrome and NE.chrome.Apply and not done[menu] then
+    done[menu] = true
+    menu:SetBackdrop(nil)
+    if GameMenuFrameHeader then GameMenuFrameHeader:Hide() end
+    for _, r in ipairs({ menu:GetRegions() }) do
+      if r:GetObjectType() == "FontString" and r:GetText() == MAIN_MENU then r:Hide() end
+    end
+    NE.chrome.Apply(menu, { layout = "PortraitFrameTemplate", title = MAIN_MENU, noPortrait = true, noCloseButton = true })
+    local band = menu._neTitleBand
+    if band then
+      band:ClearAllPoints()
+      band:SetPoint("TOPLEFT", 24, -1)
+      band:SetPoint("TOPRIGHT", -24, -1)
+    end
+  end
+
   local fu = NE.dragon and NE.dragon.ForeverUI
   for _, b in ipairs({ menu:GetChildren() }) do
     local name = b:GetName()

@@ -42,6 +42,7 @@ local DEFAULTS = {
   cooldownmanager  = { mode = "none",   custom = 1.0 },
   encounterjournal = { mode = "none",   custom = 1.0 },
   combinedbag      = { mode = "ui",     custom = 1.0 },
+  options          = { mode = "ui",     custom = 1.0 },
 }
 
 -- BUG FIX (owner report 2026-07-17, round two: "the default is still massive" after DEFAULTS.social/

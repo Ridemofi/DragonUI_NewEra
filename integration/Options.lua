@@ -158,6 +158,7 @@ local function builder(scroll)
             { key = "cooldownmanager", label = L["Cooldown Manager"] },
             { key = "encounterjournal", label = L["Adventure Guide"] },
             { key = "combinedbag",     label = L["Combined Bag"] },
+            { key = "options",         label = GAMEOPTIONS_MENU or L["Options"] },
         }
 
         -- One window's stacked controls: a centered column header, a mode dropdown, and a custom-scale

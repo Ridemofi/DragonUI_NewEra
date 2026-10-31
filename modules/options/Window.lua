@@ -368,6 +368,12 @@ local function Build()
   f:Hide()
   O.frame = f
 
+  -- Window Scaling (core/Scale.lua): "ui" by default, so the window follows the UI Scale slider.
+  if NE.scale and NE.scale.SetFrame then
+    NE.scale.SetFrame("options", f)
+    NE.scale.Apply("options")
+  end
+
   if NE.chrome and NE.chrome.Apply then
     NE.chrome.Apply(f, { layout = "PortraitFrameTemplate", title = GAMEOPTIONS_MENU or "Options", noPortrait = true })
   end
