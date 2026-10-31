@@ -72,7 +72,7 @@ O.groups = {
     reset = "CONFIRM_RESET_INTERFACE_SETTINGS" },
 }
 
-local ROW_H, LIST_W, NUM_ROWS = 18, 175, 28
+local ROW_H, LIST_W, NUM_ROWS = 18, 175, 21   -- 21 rows fill the 400px tree under the search box
 local next = next
 local function SecureNext(t, k) return securecall(next, t, k) end   -- as stock OptionsFrameTemplates.lua
 local function inCombat() return InCombatLockdown and InCombatLockdown() end
@@ -352,10 +352,11 @@ end
 
 local function Build()
   if f then return f end
-  -- Stock panel container is 623 x 570 inside the 858 x 660 stock frame; ours keeps that size so every
-  -- stock panel lays out exactly as it does at home.
+  -- The 3.3.5a stock panel container is 413 x 430 (OptionsFrameTemplate: 648 x 520 frame, 175 x 429
+  -- category list at 22,-40, container 16 right of it to 22 from the edge). Ours is the same size, so
+  -- every stock and addon panel lays out exactly as it does at home.
   f = CreateFrame("Frame", "NE_OptionsFrame", UIParent)
-  f:SetSize(12 + LIST_W + 10 + 623 + 12, 62 + 570 + 40)
+  f:SetSize(12 + LIST_W + 10 + 413 + 12, 62 + 430 + 40)
   f:SetPoint("CENTER")
   f:SetFrameStrata("HIGH")          -- under DIALOG, so the stock reset / restart popups sit on top
   f:SetToplevel(true)
@@ -441,7 +442,7 @@ local function Build()
   if NE.scrollbar and NE.scrollbar.Reskin then NE.scrollbar.Reskin(scroll) end
   scroll:Hide()
   local child = CreateFrame("Frame", "NE_OptionsFrameScrollChild", scroll)
-  child:SetSize(580, 1)
+  child:SetSize(379, 1)   -- the scroll frame: 413 container - 6 - 28
   scroll:SetScrollChild(child)
   O.scroll, O.pane = scroll, child
   O.paneTitle = child:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
